@@ -1,7 +1,8 @@
 "use server";
 import { event_schedule, master_data, PrismaClient } from "@/generated/prisma";
 import dayjs from "dayjs";
-const prisma = new PrismaClient();
+import PrismaDB from "../db";
+const prisma = PrismaDB;
 
 export type eventCreateProps = {
   description?: string;

@@ -1,6 +1,7 @@
 "use server";
 import { master_data, PrismaClient } from "@/generated/prisma";
-const prisma = new PrismaClient();
+import PrismaDB from "../db";
+const prisma = PrismaDB;
 export async function getSchools(props: { schoolName?: string }) {
   const { schoolName } = props;
   try {
@@ -16,7 +17,7 @@ export async function getSchools(props: { schoolName?: string }) {
       take: schoolName ? 1000 : 50,
       orderBy: { id: "asc" },
     });
-    return schools as  master_data[];
+    return schools as master_data[];
   } catch (error) {
     console.error("Error fetching schools:", error);
     throw error;
