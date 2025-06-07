@@ -1,5 +1,4 @@
 "use server";
-import { event_schedule, master_data, PrismaClient } from "@/generated/prisma";
 import dayjs from "dayjs";
 import PrismaDB from "../db";
 const prisma = PrismaDB;
