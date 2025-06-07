@@ -1,0 +1,75 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model master_data {
+  no                   String?
+  amount               String?
+  kw_pk                String?
+  school_name          String
+  address              String?
+  district             String?
+  amphur               String?
+  province             String?
+  postcode             String?
+  student              String?
+  sector               String?
+  affiliation          String?
+  affillation_district String?
+  egat                 String?
+  rate                 String?
+  ca                   String?
+  status               String?
+  contact_rate         String?
+  talk_rate            String?
+  interest_rest        String?
+  install_rate         String?
+  score                String?
+  process              String?
+  email                String?
+  process_date         String?
+  process_by           String?
+  contact_school       String?
+  contact_position     String?
+  contact_phone        String?
+  director_school      String?
+  director_phone       String?
+  avg_electic          String?
+  egat_status          String?
+  investor             String?
+  install_size         String?
+  name_school_contact  String?
+  org_phone            String?
+  paper_no             String?
+  paper_date           String?
+  no_st                String?
+  return_date          String?
+  simulation           String?
+  proposal             String?
+  pea_proposal         String?
+  pea                  String?
+  focus                String?
+  teacher_joe          String?
+  check_dup            String?
+  latitude             String?
+  longitude            String?
+  chk                  String?
+  id                   Int              @id @default(autoincrement())
+  event_schedule       event_schedule[]
+}
+
+model event_schedule {
+  id          Int         @id @default(autoincrement())
+  team        String
+  title       String
+  description String?
+  school_id   Int
+  date        DateTime    @db.Timestamptz(6)
+  master_data master_data @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_master_id")
+}
