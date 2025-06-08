@@ -16,7 +16,7 @@ import KeyboardArrowLeft from "@mui/icons-material/KeyboardArrowLeft";
 import KeyboardArrowRight from "@mui/icons-material/KeyboardArrowRight";
 import LastPageIcon from "@mui/icons-material/LastPage";
 import { TableHead } from "@mui/material";
-import { useSchoolQueryPagination } from "@/query/useQuery";
+import { useSchoolQueryPagination } from "@/actions/useQuery";
 import { master_data } from "@prisma/client";
 import type { SortingState } from "@tanstack/react-table";
 

@@ -1,6 +1,7 @@
 "use server";
 import dayjs from "dayjs";
 import PrismaDB from "../db";
+import { sendMessageToLine } from "./line";
 const prisma = PrismaDB;
 
 export type eventCreateProps = {
@@ -21,7 +22,11 @@ export const createEvent = async (props: eventCreateProps) => {
         date: props.start,
         school_id: props.schoolId, // ← id จาก master_data
       },
+      include: { master_data: true },
     });
+    try {
+      sendMessageToLine(res);
+    } catch (error) {}
     return res;
   } catch (error) {
     console.error("Error create event:", error);
@@ -43,6 +48,25 @@ export async function getEventByDate(props: {
           gte: dayjs(start_date).startOf("day").toDate(),
           lte: dayjs(end_date).endOf("day").toDate(),
         },
+      },
+      include: {
+        master_data: true,
+      },
+      orderBy: { date: "asc" },
+    });
+    return eventData;
+  } catch (error) {
+    console.error("Error fetching schools:", error);
+    throw error;
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+export async function getEventById(id: number) {
+  try {
+    const eventData = await prisma.event_schedule.findMany({
+      where: {
+        id: id,
       },
       include: {
         master_data: true,

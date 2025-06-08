@@ -22,13 +22,14 @@ import {
   IconButton,
 } from "@mui/material";
 import AsynSchoolAutoComplete from "./school-autocomplete";
-import { getSchools } from "@/query/school";
+import { getSchools } from "@/actions/school";
 import { useQuery } from "@tanstack/react-query";
-import { useSchoolQuery } from "@/query/useQuery";
-import { createEvent } from "@/query/event";
+import { useSchoolQuery } from "@/actions/useQuery";
+import { createEvent } from "@/actions/event";
 import { TransitionProps } from "@mui/material/transitions";
 import dayjs from "dayjs";
 import { master_data } from "@prisma/client";
+import { sendMessageToLine } from "@/actions/line";
 
 export default function EventForm(props: {
   refetchEvent: () => void;
@@ -69,13 +70,16 @@ export default function EventForm(props: {
         title,
         description,
       });
+
+  
+
+      props.refetchEvent();
+      onClose();
       setSnackbarState({
         type: "success",
         open: true,
         remark: "Create Event success",
       });
-      props.refetchEvent();
-      onClose();
     } catch (error) {
       console.log("error", error);
       setSnackbarState({
@@ -179,7 +183,6 @@ export default function EventForm(props: {
             },
             bgcolor: "background.paper",
             boxShadow: 24,
-       
           }}
         >
           <Paper

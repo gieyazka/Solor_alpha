@@ -1,5 +1,6 @@
+import { getAllSchools } from "@/actions/school";
 import RenderMasterData from "@/components/master_data";
-import { getAllSchools } from "@/query/school";
+
 
 const CalendarPage = async () => {
   // console.time("getSchool");

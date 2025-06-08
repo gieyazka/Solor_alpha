@@ -3,10 +3,10 @@
 import dayjs from "dayjs";
 import RenderCalendar from "./calendar";
 import { useState } from "react";
-import { useEventQuery } from "@/query/useQuery";
+import { useEventQuery } from "@/actions/useQuery";
 import { Box, Button, Modal, Typography } from "@mui/material";
 import EventForm from "./form";
-import { getEventByDate } from "@/query/event";
+import { getEventByDate } from "@/actions/event";
 import { useQueryClient } from "@tanstack/react-query";
 
 export const RenderEvent = () => {

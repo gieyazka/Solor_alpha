@@ -1,5 +1,5 @@
 "use client";
-import { useSchoolQuery, useSchoolQueryPagination } from "@/query/useQuery";
+import { useSchoolQuery, useSchoolQueryPagination } from "@/actions/useQuery";
 import RenderMasterTable from "./table";
 import React from "react";
 
