@@ -25,7 +25,6 @@ import AsynSchoolAutoComplete from "./school-autocomplete";
 import { getSchools } from "@/query/school";
 import { useQuery } from "@tanstack/react-query";
 import { useSchoolQuery } from "@/query/useQuery";
-import { master_data } from "@/generated/prisma";
 import { createEvent } from "@/query/event";
 import { TransitionProps } from "@mui/material/transitions";
 import dayjs from "dayjs";
@@ -153,12 +152,33 @@ export default function EventForm(props: {
         <Box
           sx={{
             position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
+            top: {
+              xs: 0, // 📱 มือถือ: ชิดบน
+              sm: "50%", // 💻 หน้าจอใหญ่: กลางจอ
+            },
+            left: {
+              xs: 0,
+              sm: "50%",
+            },
+            transform: {
+              xs: "none", // มือถือ: ไม่ต้องแปล
+              sm: "translate(-50%, -50%)", // จอใหญ่: จัดกลางจอ
+            },
             width: "100%",
             maxWidth: 500,
-            overflowY: "auto", // fallback ถ้า Tailwind ไม่ทำงาน
+            height: {
+              xs: "100vh", // มือถือ: เต็มจอ
+              sm: "auto", // จอใหญ่: สูงตามเนื้อหา
+            },
+            maxHeight: "90vh",
+            overflowY: "auto",
+            borderRadius: {
+              xs: 0,
+              sm: 3,
+            },
+            bgcolor: "background.paper",
+            boxShadow: 24,
+       
           }}
         >
           <Paper

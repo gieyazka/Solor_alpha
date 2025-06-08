@@ -5,7 +5,6 @@ import RenderCalendar from "./calendar";
 import { useState } from "react";
 import { useEventQuery } from "@/query/useQuery";
 import { Box, Button, Modal, Typography } from "@mui/material";
-import { event_schedule } from "@/generated/prisma";
 import EventForm from "./form";
 import { getEventByDate } from "@/query/event";
 import { useQueryClient } from "@tanstack/react-query";
@@ -106,13 +105,19 @@ const ModalDetail = (props: {
           top: "50%",
           left: "50%",
           transform: "translate(-50%, -50%)",
-          width: 500,
+          width: {
+            xs: "90%", // 📱 มือถือ: กว้าง 90%
+            sm: 500, // 💻 หน้าจอ ≥ 600px: กว้าง 500px
+          },
           maxHeight: "90vh",
           overflowY: "auto",
           bgcolor: "background.paper",
           borderRadius: 3,
           boxShadow: 24,
-          p: 4,
+          p: {
+            xs: 2,
+            sm: 4,
+          },
         }}
       >
         <Typography variant="h5" fontWeight="bold" gutterBottom>
