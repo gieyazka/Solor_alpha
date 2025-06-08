@@ -125,7 +125,7 @@ export const sendMessageToLine = async (
       );
       console.log("✅ ส่งข้อความสำเร็จ", response.status);
     }
-    return response.data;
+    return "success";
   } catch (error: any) {
     console.error(
       "❌ ส่งข้อความล้มเหลว",
