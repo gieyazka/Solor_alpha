@@ -4,7 +4,7 @@ import Autocomplete from "@mui/material/Autocomplete";
 import CircularProgress from "@mui/material/CircularProgress";
 import { getSchools } from "@/query/school";
 import { useSchoolQuery } from "@/query/useQuery";
-import { master_data, Prisma } from "@/generated/prisma";
+import { master_data } from "@prisma/client";
 
 interface Film {
   title: string;

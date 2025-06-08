@@ -1,6 +1,6 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
-import { getSchools } from "./school";
+import { getSchools, getSchoolsPagination } from "./school";
 import { getEventByDate } from "./event";
 
 export const useSchoolQuery = (props: { schoolName?: string }) => {
@@ -8,6 +8,18 @@ export const useSchoolQuery = (props: { schoolName?: string }) => {
   return useQuery({
     queryKey: ["schools", schoolName],
     queryFn: () => getSchools({ schoolName }),
+  });
+};
+export const useSchoolQueryPagination = (props: {
+  schoolName?: string;
+  page?: number;
+  size: number;
+}) => {
+  const { schoolName, size, page = 1 } = props;
+
+  return useQuery({
+    queryKey: ["schools", schoolName, page, size],
+    queryFn: () => getSchoolsPagination({ schoolName, page, size }),
   });
 };
 

@@ -28,6 +28,7 @@ import { useSchoolQuery } from "@/query/useQuery";
 import { createEvent } from "@/query/event";
 import { TransitionProps } from "@mui/material/transitions";
 import dayjs from "dayjs";
+import { master_data } from "@prisma/client";
 
 export default function EventForm(props: {
   refetchEvent: () => void;
