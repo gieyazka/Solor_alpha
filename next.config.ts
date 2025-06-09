@@ -12,4 +12,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig; // ✅ ต้องครอบ config ตรงนี้
+export default withPWA(nextConfig); // ✅ ต้องครอบ config ตรงนี้
