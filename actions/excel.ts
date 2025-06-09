@@ -98,7 +98,7 @@ export async function writeToSheet(data: eventProps) {
       },
     });
     const plainResult = JSON.parse(JSON.stringify(res));
-    sendMessageToLine(data);
+    const lineaRes = await sendMessageToLine(data);
     console.log("✅ เขียนข้อมูลลง Google Sheet สำเร็จ");
     return plainResult;
   } catch (error) {

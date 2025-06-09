@@ -48,7 +48,7 @@ export const RenderEvent = (props: {
     setCurrentDate(e);
   };
   const event: Event[] = eventData?.map((d) => {
-    const schoolData = keyMaster?.[d.school_id.toString()];
+    const schoolData = keyMaster?.[d.school_id?.toString()];
     return {
       title: schoolData?.["ชื่อโรงเรียน"],
       start: dayjs(d.date).toDate(), // 10 มิ.ย. 2025 10:00
@@ -58,7 +58,7 @@ export const RenderEvent = (props: {
       color: "red", // ฟิลด์กำหนดสีเอง
       id: d.id,
     };
-  });
+  }).filter(d=> d?.title !== undefined);
   // const eventData = eventQuery.data?.map((d) => {
   //   return {
   //     title: d.master_data.school_name,
