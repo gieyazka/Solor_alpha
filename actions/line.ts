@@ -1,66 +1,106 @@
 import axios from "axios";
 import { getEventByDate } from "./event";
 import dayjs from "@/utils/dayjs";
+import { eventProps } from "@/@type";
 // U2091822f75cd6222b3b15e73e19e5879   // AS
 //Uf5ad20aeae32717cc15c1f7545105fe3  //Ky
 const userIds = [
   "Uf5ad20aeae32717cc15c1f7545105fe3",
   "U2091822f75cd6222b3b15e73e19e5879",
 ];
-// const groupId = `Ca919cff8a2de4b1981e48f836e8f877a`; //กลุ่มจริง
-const groupId = `Uf5ad20aeae32717cc15c1f7545105fe3`;
+const groupId = `Ca919cff8a2de4b1981e48f836e8f877a`; //กลุ่มจริง
+// const groupId = `Uf5ad20aeae32717cc15c1f7545105fe3`;
 const { CHANNEL_ACCESS_TOKEN } = process.env;
 export const sendMessageToLine = async (
-  data: Awaited<ReturnType<typeof getEventByDate>>[0]
+  data: eventProps
 ) => {
   try {
-    const schoolData = data?.master_data;
+    const schoolData = data?.schoolData;
+    const phone = (schoolData?.["เบอร์ติดต่อผู้ประสานงาน"] || "-").replace(/-/g, "");
+    const director_phone = (schoolData?.["เบอร์ติดต่อ ผอ."] || "-").replace(
+      /-/g,
+      ""
+    );
+
     const flexMessage = {
       type: "flex",
-      altText: `📍 นัดหมาย: ${schoolData?.school_name || "โรงเรียน"}`,
+      altText: `📍 นัดหมาย: ${schoolData?.["ชื่อโรงเรียน"] || "โรงเรียน"}`,
       contents: {
         type: "bubble",
         body: {
           type: "box",
           layout: "vertical",
+
           spacing: "md",
           contents: [
             {
               type: "text",
-              text: `📍 ${schoolData?.school_name || "-"}`,
+              text: `📍 ${schoolData?.["ชื่อโรงเรียน"] || "-"}`,
               weight: "bold",
               size: "lg",
               wrap: true,
             },
+
             {
-              type: "box",
-              layout: "vertical",
-              spacing: "xs",
-              contents: [
-                {
-                  type: "text",
-                  text: `👤 ผู้ประสานงาน: ${
-                    schoolData?.contact_school || "-"
-                  } (${schoolData?.contact_position || "-"})`,
-                  wrap: true,
-                  size: "sm",
-                },
-                {
-                  type: "text",
-                  text: `📞 เบอร์โทร: ${schoolData?.contact_phone || "-"}`,
-                  wrap: true,
-                  size: "sm",
-                },
-                {
-                  type: "text",
-                  text: `👨‍🏫 ผู้อำนวยการ: ${
-                    schoolData?.director_school || "-"
-                  } (${schoolData?.director_phone || "-"})`,
-                  wrap: true,
-                  size: "sm",
-                },
-              ],
+              type: "text",
+              text: `👤 ผู้ประสานงาน: ${schoolData?.["ชื่อผู้ประสานงานโรงเรียน"] || "-"} (${
+                schoolData?.["ตำแหน่ง"] || "-"
+              })`,
+              wrap: true,
+              size: "sm",
             },
+
+            {
+              type: "text",
+              text:
+                phone === "-"
+                  ? "-"
+                  : `📞 เบอร์โทร: ${schoolData?.[`เบอร์ติดต่อผู้ประสานงาน`]}`,
+              wrap: true,
+              size: "sm",
+              weight: "bold",
+              // color: "#1DB446",
+              align: "start", // ชิดซ้าย
+              action:
+                phone === "-"
+                  ? undefined
+                  : {
+                      type: "uri",
+                      label: phone,
+                      uri: `tel:${phone}`,
+                    },
+            },
+            // {
+            //   type: "text",
+            //   text: `👨‍🏫 ผู้อำนวยการ: ${schoolData?.director_school || "-"} (${
+            //     schoolData?.director_phone || "-"
+            //   })`,
+            //   wrap: true,
+            //   size: "sm",
+            // },
+
+            {
+              type: "text",
+              text: `👨‍🏫 ผู้อำนวยการ: ${schoolData?.["ชื่อผู้อำนวยการโรงเรียน"] || "-"} (${
+                schoolData?.["เบอร์ติดต่อ ผอ."] || "-"
+              })`,
+              wrap: true,
+              size: "sm",
+              weight: "bold",
+              // color: "#1DB446",
+              align: "start", // ชิดซ้าย
+              action:
+                director_phone === "-"
+                  ? undefined
+                  : {
+                      type: "uri",
+                      label: director_phone.split("ต่อ")[0]?.replace(/ /g, ""),
+                      uri: `tel:${director_phone
+                        .split("ต่อ")[0]
+                        ?.replace(/ /g, "")}`,
+                    },
+            },
+
             {
               type: "separator",
               margin: "md",
@@ -81,7 +121,9 @@ export const sendMessageToLine = async (
                   type: "text",
                   text: `🗓 วันเวลา: ${
                     data?.date
-                      ? dayjs(data.date).format("DD MMMM YYYY เวลา HH:mm")
+                      ? dayjs(data.date)
+                          .add(7, "hour")
+                          .format("DD MMMM YYYY เวลา HH:mm")
                       : "-"
                   }`,
                   wrap: true,
@@ -89,7 +131,7 @@ export const sendMessageToLine = async (
                 },
                 {
                   type: "text",
-                  text: `👤 Team : ${data.team}  }`,
+                  text: `👤 Team : ${data.team}`,
                   wrap: true,
                   size: "sm",
                 },

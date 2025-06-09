@@ -5,6 +5,7 @@ import CircularProgress from "@mui/material/CircularProgress";
 import { getSchools } from "@/actions/school";
 import { useSchoolQuery } from "@/actions/useQuery";
 import { master_data } from "@prisma/client";
+import { SchoolData } from "@/@type";
 
 interface Film {
   title: string;
@@ -20,36 +21,38 @@ function sleep(duration: number): Promise<void> {
 }
 
 export default function AsynSchoolAutoComplete(props: {
-  handleChangeSchool: (d: master_data) => void;
+  masterData: SchoolData[];
+  handleChangeSchool: (d: SchoolData) => void;
 }) {
+  const { masterData } = props;
   const [open, setOpen] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [inputValue, setInputValue] = React.useState("");
   const [searchValue, setSerachValue] = React.useState<string | undefined>();
-  const [schoolSelect, setSchoolSelect] = React.useState<master_data>();
+
   const debounceRef = React.useRef<NodeJS.Timeout | null>(null);
 
-  const schoolQuery = useSchoolQuery({ schoolName: searchValue });
-  React.useEffect(() => {
-    // เคลียร์ timeout เดิมก่อน
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-    if (inputValue === "") {
-      setSerachValue(inputValue || undefined);
-    } else {
-      // ตั้ง timeout ใหม่ 3 วินาที
-      debounceRef.current = setTimeout(() => {
-        setLoading(true);
-        setSerachValue(inputValue || undefined);
-      }, 1000); // ← debounce 1.5 วินาที
-    }
-    return () => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-      }
-    };
-  }, [inputValue]);
+  // const schoolQuery = useSchoolQuery({ schoolName: searchValue });
+  // React.useEffect(() => {
+  // เคลียร์ timeout เดิมก่อน
+  // if (debounceRef.current) {
+  //   clearTimeout(debounceRef.current);
+  // }
+  // if (inputValue === "") {
+  //   setSerachValue(inputValue || undefined);
+  // } else {
+  //   // ตั้ง timeout ใหม่ 3 วินาที
+  //   debounceRef.current = setTimeout(() => {
+  //     setLoading(true);
+  //     setSerachValue(inputValue || undefined);
+  //   }, 1000); // ← debounce 1.5 วินาที
+  // }
+  // return () => {
+  //   if (debounceRef.current) {
+  //     clearTimeout(debounceRef.current);
+  //   }
+  // };
+  // }, [inputValue]);
   const handleOpen = () => {
     setOpen(true);
     (async () => {
@@ -64,9 +67,17 @@ export default function AsynSchoolAutoComplete(props: {
     // setOptions([]);
   };
 
-  const optionScool = schoolQuery.data?.map((d) => {
-    return d;
-  });
+  const optionScool = React.useMemo(() => {
+    if (inputValue !== "") {
+      return masterData
+        .filter((d) => d?.["ชื่อโรงเรียน"].includes(inputValue))
+        .splice(0, 49);
+    }
+    return masterData.splice(0, 21);
+  }, [inputValue]);
+  // const optionScool = schoolQuery.data?.map((d) => {
+  //   return d;
+  // });
   return (
     <Autocomplete
       // sx={{ width: 300 }}
@@ -76,17 +87,16 @@ export default function AsynSchoolAutoComplete(props: {
       onInputChange={(event, value) => {
         setInputValue(value);
       }}
-      isOptionEqualToValue={(option, value) =>
-        option?.school_name === value?.school_name
-      }
+      isOptionEqualToValue={(option, value) => {
+        return option?.["ชื่อโรงเรียน"] === value?.["ชื่อโรงเรียน"];
+      }}
       onChange={(event: any, newValue) => {
-        setSchoolSelect(newValue as master_data);
-        props.handleChangeSchool(newValue as master_data);
+        props.handleChangeSchool(newValue as SchoolData);
       }}
       getOptionKey={(option) => option.id}
-      getOptionLabel={(option) => option.school_name}
+      getOptionLabel={(option) => option?.["ชื่อโรงเรียน"]}
       options={optionScool ?? []}
-      loading={schoolQuery.isFetching}
+      // loading={schoolQuery.isFetching}
       renderInput={(params) => (
         <TextField
           {...params}
@@ -96,9 +106,9 @@ export default function AsynSchoolAutoComplete(props: {
               ...params.InputProps,
               endAdornment: (
                 <React.Fragment>
-                  {schoolQuery.isFetching ? (
+                  {/* {schoolQuery.isFetching ? (
                     <CircularProgress color="inherit" size={20} />
-                  ) : null}
+                  ) : null} */}
                   {params.InputProps.endAdornment}
                 </React.Fragment>
               ),

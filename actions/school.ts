@@ -1,6 +1,19 @@
 "use server";
+import { SchoolData } from "@/@type";
 import PrismaDB from "../db";
+import { loadMasterData } from "./excel";
 const prisma = PrismaDB;
+
+export const getMaster = async () => {
+  try {
+    const master = await loadMasterData();
+    return master as SchoolData[]
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+};
+
 export async function getSchools(props: { schoolName?: string }) {
   const { schoolName } = props;
   try {
@@ -44,7 +57,6 @@ export async function getSchoolsPagination(props: {
 }) {
   const { schoolName } = props;
   try {
-    console.log("props", props);
     const [rows, total] = await Promise.all([
       prisma.master_data.findMany({
         where:

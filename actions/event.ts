@@ -25,7 +25,7 @@ export const createEvent = async (props: eventCreateProps) => {
       include: { master_data: true },
     });
     try {
-      sendMessageToLine(res);
+      // sendMessageToLine(res);
     } catch (error) {}
     return res;
   } catch (error) {

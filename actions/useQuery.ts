@@ -30,3 +30,7 @@ export const useEventQuery = (props: { startDate: Date; endDate: Date }) => {
     queryFn: () => getEventByDate({ start_date: startDate, end_date: endDate }),
   });
 };
+
+
+
+

@@ -1,27 +1,21 @@
 "use client";
-import { event_schedule } from "@/generated/prisma";
 import { getEventByDate } from "@/actions/event";
 import { useEventQuery } from "@/actions/useQuery";
-import dayjs from '@/utils/dayjs';
+import dayjs from "@/utils/dayjs";
 import { useState } from "react";
-import { Calendar, dayjsLocalizer } from "react-big-calendar";
+import { Calendar, dayjsLocalizer, Event } from "react-big-calendar";
 import "react-big-calendar/lib/css/react-big-calendar.css";
+import { eventProps, SchoolData } from "@/@type";
+import { event_schedule } from "@prisma/client";
 const localizer = dayjsLocalizer(dayjs);
 const RenderCalendar = (props: {
+  keyMaster: { [k: string]: SchoolData };
   handleChangeDate: (v: Date) => void;
   handleOpenEventModal: (
-    v: Awaited<ReturnType<typeof getEventByDate>>[0]
+    v: eventProps
   ) => void;
 
-  events?:
-    | {
-        start: Date;
-        end: Date;
-        title: string;
-        allDay: boolean;
-        eventData: event_schedule;
-      }[]
-    | undefined;
+  events?: Event[];
 }) => {
   return (
     <Calendar
@@ -48,11 +42,7 @@ const RenderCalendar = (props: {
       components={{
         event: ({ event }) => (
           <div
-            onClick={() =>
-              props.handleOpenEventModal(
-                event.eventData as Awaited<ReturnType<typeof getEventByDate>>[0]
-              )
-            }
+            onClick={() => props.handleOpenEventModal(event.resource)}
             style={{ cursor: "pointer" }}
           >
             📌 {event.title}

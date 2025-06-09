@@ -1,6 +1,6 @@
 "use client";
 
-import dayjs from '@/utils/dayjs';
+import dayjs from "@/utils/dayjs";
 import RenderCalendar from "./calendar";
 import { useState } from "react";
 import { useEventQuery } from "@/actions/useQuery";
@@ -8,13 +8,22 @@ import { Box, Button, Modal, Typography } from "@mui/material";
 import EventForm from "./form";
 import { getEventByDate } from "@/actions/event";
 import { useQueryClient } from "@tanstack/react-query";
+import { eventProps, SchoolData } from "@/@type";
+import { Event } from "react-big-calendar";
 
-export const RenderEvent = () => {
+export const RenderEvent = (props: {
+  masterData: SchoolData[];
+  eventData: eventProps[];
+}) => {
+  const { masterData, eventData } = props;
+
+  const keyMaster = Object.fromEntries(masterData.map((d) => [d.id, d]));
+
   const [currentDate, setCurrentDate] = useState(new Date());
-  const eventQuery = useEventQuery({
-    endDate: dayjs(currentDate).endOf("month").toDate(),
-    startDate: dayjs(currentDate).startOf("month").toDate(),
-  });
+  // const eventQuery = useEventQuery({
+  //   endDate: dayjs(currentDate).endOf("month").toDate(),
+  //   startDate: dayjs(currentDate).startOf("month").toDate(),
+  // });
   const queryClient = useQueryClient();
   const refetchEvent = () => {
     queryClient.invalidateQueries({ queryKey: ["event"] });
@@ -22,16 +31,14 @@ export const RenderEvent = () => {
 
   const [eventModal, setEventModal] = useState<{
     open: boolean;
-    data?: Awaited<ReturnType<typeof getEventByDate>>[0];
+    data?: eventProps;
   }>({ open: false, data: undefined });
   const [eventForm, setEventForm] = useState<{
     open: boolean;
   }>({ open: false });
 
-  const handleOpenEventModal = (
-    d: Awaited<ReturnType<typeof getEventByDate>>[0]
-  ) => {
-    setEventModal({ open: true, data: d });
+  const handleOpenEventModal = (eventData: eventProps) => {
+    setEventModal({ open: true, data: eventData });
   };
   const handleCloseEventModal = () => {
     setEventModal({ open: false, data: undefined });
@@ -40,18 +47,29 @@ export const RenderEvent = () => {
   const handleChangeDate = (e: Date) => {
     setCurrentDate(e);
   };
-
-  const evnetData = eventQuery.data?.map((d) => {
+  const event: Event[] = eventData?.map((d) => {
+    const schoolData = keyMaster?.[d.school_id.toString()];
     return {
-      title: d.master_data.school_name,
-      start: d.date, // 10 มิ.ย. 2025 10:00
-      end: d.date, // 10 มิ.ย. 2025 11:00
+      title: schoolData?.["ชื่อโรงเรียน"],
+      start: dayjs(d.date).toDate(), // 10 มิ.ย. 2025 10:00
+      end: dayjs(d.date).toDate(), // 10 มิ.ย. 2025 11:00
       allDay: false,
-      eventData: d,
+      resource: { ...d, schoolData },
       color: "red", // ฟิลด์กำหนดสีเอง
       id: d.id,
     };
   });
+  // const eventData = eventQuery.data?.map((d) => {
+  //   return {
+  //     title: d.master_data.school_name,
+  //     start: d.date, // 10 มิ.ย. 2025 10:00
+  //     end: d.date, // 10 มิ.ย. 2025 11:00
+  //     allDay: false,
+  //     eventData: d,
+  //     color: "red", // ฟิลด์กำหนดสีเอง
+  //     id: d.id,
+  //   };
+  // });
 
   const onOpenForm = () => {
     setEventForm({
@@ -72,6 +90,8 @@ export const RenderEvent = () => {
         data={eventModal.data}
       />
       <EventForm
+           keyMaster={keyMaster}
+        masterData={masterData}
         refetchEvent={refetchEvent}
         handleClose={onCloseForm}
         open={eventForm.open}
@@ -82,9 +102,10 @@ export const RenderEvent = () => {
         </Button>
       </div>
       <RenderCalendar
+        keyMaster={keyMaster}
         handleChangeDate={handleChangeDate}
         handleOpenEventModal={handleOpenEventModal}
-        events={evnetData}
+        events={event}
       />
     </div>
   );
@@ -92,11 +113,11 @@ export const RenderEvent = () => {
 
 const ModalDetail = (props: {
   open: boolean;
-  data?: Awaited<ReturnType<typeof getEventByDate>>[0];
+  data?: eventProps;
   handleClose: () => void;
 }) => {
   const { data } = props;
-  const schoolData = data?.master_data;
+  const schoolData = data?.schoolData;
   return (
     <Modal open={props.open} onClose={props.handleClose}>
       <Box
@@ -121,20 +142,22 @@ const ModalDetail = (props: {
         }}
       >
         <Typography variant="h5" fontWeight="bold" gutterBottom>
-          📍 {schoolData?.school_name}
+          📍 {schoolData?.["ชื่อโรงเรียน"]}
         </Typography>
 
         <Box sx={{ mb: 2 }}>
           <Typography variant="body1" color="text.secondary">
-            ผู้ประสานงาน: <strong>{schoolData?.contact_school}</strong> (
-            {schoolData?.contact_position})
+            ผู้ประสานงาน:{" "}
+            <strong>{schoolData?.["ชื่อผู้ประสานงานโรงเรียน"]}</strong> (
+            {schoolData?.["ตำแหน่ง"]})
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            เบอร์โทร: <strong>{schoolData?.contact_phone}</strong>
+            เบอร์โทร: <strong>{schoolData?.["เบอร์ติดต่อผู้ประสานงาน"]}</strong>
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            ผู้อำนวยการ: <strong>{schoolData?.director_school}</strong> (
-            {schoolData?.director_phone})
+            ผู้อำนวยการ:{" "}
+            <strong>{schoolData?.["ชื่อผู้อำนวยการโรงเรียน"]}</strong> (
+            {schoolData?.["เบอร์ติดต่อ ผอ."]})
           </Typography>
         </Box>
 

@@ -59,7 +59,6 @@ export default function XlsxUploader() {
     [data].forEach((dataset) => {
       mergedMap = mergeData(dataset, mergedMap);
     });
-    console.log("mergedMap", mergedMap);
     const finalData = Array.from(mergedMap.values());
     const districtMap = new Map();
     data_5.forEach((item) => {

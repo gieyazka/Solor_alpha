@@ -27,20 +27,27 @@ import { useQuery } from "@tanstack/react-query";
 import { useSchoolQuery } from "@/actions/useQuery";
 import { createEvent } from "@/actions/event";
 import { TransitionProps } from "@mui/material/transitions";
-import dayjs from '@/utils/dayjs';
+import dayjs from "@/utils/dayjs";
 import { master_data } from "@prisma/client";
 import { sendMessageToLine } from "@/actions/line";
+import { SchoolData } from "@/@type";
+import { writeToSheet } from "@/actions/excel";
+import { useRouter } from "next/navigation";
 
 export default function EventForm(props: {
+  keyMaster: { [k: string]: SchoolData };
+
   refetchEvent: () => void;
   open: boolean;
   handleClose: () => void;
+  masterData: SchoolData[];
 }) {
+  const router = useRouter();
   const [title, setTitle] = useState("");
   const [team, setTeam] = useState("");
   const [description, setDescription] = useState("");
   const [start, setStart] = useState("");
-  const [schoolData, setSchoolData] = useState<master_data>();
+  const [schoolData, setSchoolData] = useState<SchoolData>();
   const [snackbarState, setSnackbarState] = useState<{
     type: AlertColor | undefined;
     open: boolean;
@@ -63,17 +70,24 @@ export default function EventForm(props: {
       return;
     }
     try {
-      const res = await createEvent({
-        schoolId: schoolData.id,
-        start: dayjs(start).toDate(),
+      const res = await writeToSheet({
+        school_id: schoolData.id,
+        date: dayjs(start).toISOString(),
         team: team,
         title,
+
         description,
+        schoolData: schoolData,
       });
-
-  
-
-      props.refetchEvent();
+      // const res = await createEvent({
+      //   schoolId: schoolData.id,
+      //   start: dayjs(start).toDate(),
+      //   team: team,
+      //   title,
+      //   description,
+      // });
+      router.refresh();
+      // props.refetchEvent();
       onClose();
       setSnackbarState({
         type: "success",
@@ -90,7 +104,7 @@ export default function EventForm(props: {
     }
   };
 
-  const handleChangeSchool = (data: master_data | undefined) => {
+  const handleChangeSchool = (data: SchoolData | undefined) => {
     setSchoolData(data);
   };
   const statusOptions = [
@@ -201,43 +215,50 @@ export default function EventForm(props: {
               </IconButton>
             </div>
             <Stack spacing={3}>
-              <AsynSchoolAutoComplete handleChangeSchool={handleChangeSchool} />
+              <AsynSchoolAutoComplete
+                masterData={props.masterData}
+                handleChangeSchool={handleChangeSchool}
+              />
 
               <TextField
                 label="Province"
-                value={schoolData?.province || ""}
+                value={schoolData?.["ชื่อจังหวัด"] || ""}
                 slotProps={{
                   input: {
                     readOnly: true,
                   },
                   inputLabel: {
-                    shrink: schoolData?.province ? true : false,
+                    shrink: schoolData?.["ชื่อจังหวัด"] ? true : false,
                   },
                 }}
                 fullWidth
               />
               <TextField
                 label="Contact person"
-                value={schoolData?.contact_school || ""}
+                value={schoolData?.["ชื่อผู้ประสานงานโรงเรียน"] || ""}
                 slotProps={{
                   input: {
                     readOnly: true,
                   },
                   inputLabel: {
-                    shrink: schoolData?.contact_school ? true : false,
+                    shrink: schoolData?.["ชื่อผู้ประสานงานโรงเรียน"]
+                      ? true
+                      : false,
                   },
                 }}
                 fullWidth
               />
               <TextField
                 label="Contact phone"
-                value={schoolData?.contact_phone || ""}
+                value={schoolData?.["เบอร์ติดต่อผู้ประสานงาน"] || ""}
                 slotProps={{
                   input: {
                     readOnly: true,
                   },
                   inputLabel: {
-                    shrink: schoolData?.contact_phone ? true : false,
+                    shrink: schoolData?.["เบอร์ติดต่อผู้ประสานงาน"]
+                      ? true
+                      : false,
                   },
                 }}
                 fullWidth
