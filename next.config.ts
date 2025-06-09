@@ -12,4 +12,6 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withPWA(nextConfig); // ✅ ต้องครอบ config ตรงนี้
+export default withPWA(nextConfig, {
+  reactStrictMode: true,
+}); // ✅ ต้องครอบ config ตรงนี้
