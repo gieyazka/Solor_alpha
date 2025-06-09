@@ -1,6 +1,6 @@
 "use client";
 
-import dayjs from "dayjs";
+import dayjs from '@/utils/dayjs';
 import RenderCalendar from "./calendar";
 import { useState } from "react";
 import { useEventQuery } from "@/actions/useQuery";

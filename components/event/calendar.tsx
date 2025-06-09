@@ -2,7 +2,7 @@
 import { event_schedule } from "@/generated/prisma";
 import { getEventByDate } from "@/actions/event";
 import { useEventQuery } from "@/actions/useQuery";
-import dayjs from "dayjs";
+import dayjs from '@/utils/dayjs';
 import { useState } from "react";
 import { Calendar, dayjsLocalizer } from "react-big-calendar";
 import "react-big-calendar/lib/css/react-big-calendar.css";

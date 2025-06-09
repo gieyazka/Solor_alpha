@@ -1,5 +1,5 @@
 "use server";
-import dayjs from "dayjs";
+import dayjs from '@/utils/dayjs';
 import PrismaDB from "../db";
 import { sendMessageToLine } from "./line";
 const prisma = PrismaDB;

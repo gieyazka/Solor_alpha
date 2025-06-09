@@ -27,7 +27,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useSchoolQuery } from "@/actions/useQuery";
 import { createEvent } from "@/actions/event";
 import { TransitionProps } from "@mui/material/transitions";
-import dayjs from "dayjs";
+import dayjs from '@/utils/dayjs';
 import { master_data } from "@prisma/client";
 import { sendMessageToLine } from "@/actions/line";
 
