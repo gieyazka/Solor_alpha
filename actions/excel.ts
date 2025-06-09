@@ -60,9 +60,9 @@ export async function loadEvent() {
   }
 }
 export const testFn = async () => {
-  // const raw = readFileSync("credentials.json", "utf8");
-  // const base64 = Buffer.from(raw).toString("base64");
-  // console.log("base64", base64);
+  const raw = readFileSync("credentials.json", "utf8");
+  const base64 = Buffer.from(raw).toString("base64");
+  console.log("base64", base64);
 };
 export async function writeToSheet(data: eventProps) {
   try {

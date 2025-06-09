@@ -1,11 +1,15 @@
 import type { NextConfig } from "next";
+const withPWA = require("next-pwa")({
+  dest: "public",
+  register: true,
+  skipWaiting: true,
+});
 
 const nextConfig: NextConfig = {
-  
   output: "standalone",
   typescript: {
     ignoreBuildErrors: true,
   },
 };
 
-export default nextConfig;
+export default withPWA(nextConfig); // ✅ ต้องครอบ config ตรงนี้
