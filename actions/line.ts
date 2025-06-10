@@ -8,8 +8,8 @@ const userIds = [
   "Uf5ad20aeae32717cc15c1f7545105fe3",
   "U2091822f75cd6222b3b15e73e19e5879",
 ];
-// const groupId = `Ca919cff8a2de4b1981e48f836e8f877a`; //กลุ่มจริง
-const groupId = `Uf5ad20aeae32717cc15c1f7545105fe3`;
+const groupId = `Ca919cff8a2de4b1981e48f836e8f877a`; //กลุ่มจริง
+// const groupId = `Uf5ad20aeae32717cc15c1f7545105fe3`;
 const { CHANNEL_ACCESS_TOKEN } = process.env;
 export const sendMessageToLine = async (data: eventProps) => {
   try {
