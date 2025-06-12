@@ -14,21 +14,49 @@ const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz
 export async function loadMasterData() {
   try {
     // console.log("📥 กำลังโหลดข้อมูลจาก OneDrive...");
-    const response = await axios.get(SHEET_URL);
-    let data = response.data;
-    data = JSON.parse(data.substr(47).slice(0, -2));
-    const headers = data.table.cols.map((col: any) => col.label);
+    // const response = await axios.get(SHEET_URL);
+    // let data = response.data;
+    // data = JSON.parse(data.substr(47).slice(0, -2));
+    // const headers = data.table.cols.map((col: any) => col.label);
 
-    const jsonData = data.table.rows.map((row: any, index: any) => {
-      let obj: Record<string, any> = {};
-      row.c.forEach((cell: any, index: any) => {
-        obj[headers[index]] = cell ? cell.v : ""; // กรองค่า null ออก
-      });
-      return obj;
+    // const jsonData = data.table.rows.map((row: any, index: any) => {
+    //   let obj: Record<string, any> = {};
+    //   row.c.forEach((cell: any, index: any) => {
+    //     obj[headers[index]] = cell ? cell.v : ""; // กรองค่า null ออก
+    //   });
+    //   return obj;
+    // });
+    // // console.log("✅ โหลดข้อมูลสำเร็จ!");
+
+    // return jsonData;
+
+    const decoded = Buffer.from(GOOGLESHEET_API_KEY!, "base64").toString(
+      "utf8"
+    );
+    const auth = new google.auth.GoogleAuth({
+      credentials: JSON.parse(decoded),
+      scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
     });
-    // console.log("✅ โหลดข้อมูลสำเร็จ!");
 
-    return jsonData;
+    const sheets = google.sheets({ version: "v4", auth });
+
+    const res = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: "Masterdata", // เปลี่ยนตามช่วงที่คุณต้องการอ่าน
+    });
+
+    const rows = res.data.values;
+    if (!rows || rows.length < 2) return [];
+
+    const [headers, ...dataRows] = rows;
+    const result = dataRows.map((row) => {
+      const rowData: Record<string, any> = {};
+      headers.forEach((header, i) => {
+        rowData[header] = row[i] ?? "";
+      });
+      return rowData;
+    });
+    return result;
   } catch (error: any) {
     console.error("❌ โหลดข้อมูลไม่สำเร็จ:", error.message);
     return [];
@@ -38,22 +66,49 @@ export async function loadEvent() {
   try {
     // console.time("⏳ โหลดข้อมูลจาก OneDrive");
     // console.log("📥 กำลังโหลดข้อมูลจาก OneDrive...");
-    const SHEET = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&gid=1992953452`;
-    const response = await axios.get(SHEET);
-    let data = response.data;
-    data = JSON.parse(data.substr(47).slice(0, -2));
-    const headers = data.table.cols.map((col: any) => col.label);
-    const jsonData = data.table.rows.map((row: any, index: any) => {
-      let obj: Record<string, any> = {};
-      row.c.forEach((cell: any, index: any) => {
-        obj[headers[index]] = cell ? cell.v : ""; // กรองค่า null ออก
-      });
-      return obj;
-    });
+    // const SHEET = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&gid=1992953452`;
+    // const response = await axios.get(SHEET);
+    // let data = response.data;
+    // data = JSON.parse(data.substr(47).slice(0, -2));
+    // const headers = data.table.cols.map((col: any) => col.label);
+    // const jsonData = data.table.rows.map((row: any, index: any) => {
+    //   let obj: Record<string, any> = {};
+    //   row.c.forEach((cell: any, index: any) => {
+    //     obj[headers[index]] = cell ? cell.v : ""; // กรองค่า null ออก
+    //   });
+    //   return obj;
+    // });
     // console.log("✅ โหลดข้อมูลสำเร็จ!");
     // console.timeEnd("⏳ โหลดข้อมูลจาก OneDrive");
 
-    return jsonData;
+    // return jsonData;
+    const decoded = Buffer.from(GOOGLESHEET_API_KEY!, "base64").toString(
+      "utf8"
+    );
+    const auth = new google.auth.GoogleAuth({
+      credentials: JSON.parse(decoded),
+      scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
+    });
+
+    const sheets = google.sheets({ version: "v4", auth });
+
+    const res = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: "การนัดหมาย", // เปลี่ยนตามช่วงที่คุณต้องการอ่าน
+    });
+
+    const rows = res.data.values;
+    if (!rows || rows.length < 2) return [];
+
+    const [headers, ...dataRows] = rows;
+    const result = dataRows.map((row) => {
+      const rowData: Record<string, any> = {};
+      headers.forEach((header, i) => {
+        rowData[header] = row[i] ?? "";
+      });
+      return rowData;
+    });
+    return result;
   } catch (error: any) {
     console.error("❌ โหลดข้อมูลไม่สำเร็จ:", error.message);
     return [];
