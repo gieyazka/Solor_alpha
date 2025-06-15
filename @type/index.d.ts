@@ -3,7 +3,7 @@ export type SchoolData = {
   ลำดับ: number;
   "ประมาณการติดตั้ง Solar cell": number;
   KW_PK: number;
-  "ตรวจสอบสถานที่": string;
+  ตรวจสอบสถานที่: string;
   ชื่อโรงเรียน: string;
   ที่อยู่: string;
   ชื่อตำบล: string;
@@ -15,8 +15,8 @@ export type SchoolData = {
   สังกัด: string;
   เขต: string;
   "กฟภ.": string;
-  อัตรา: number;
-  CA: number;
+  อัตรา: string;
+  CA: string;
   Status: string;
   "การติดต่อ 15%": number;
   "การเจรจา 30%": number;
@@ -28,7 +28,7 @@ export type SchoolData = {
   "การตัดสินใจและอำนาจภายใน (10%)": number;
   "ความพร้อมในการให้ข้อมูล (10%)": number;
   "การค้างค่าไฟฟ้า (10%)": number;
-  
+
   "พื้นที่ติดตั้งที่มีอยู่ (10%)": number;
   "สภาพวัสดุมุงหลังคา (10%)": number;
   "สภาพโครงสร้าง (10%)": number;
@@ -68,6 +68,9 @@ export type SchoolData = {
   chk: string;
   statusArr: string;
   activityArr: string;
+  meterArr: string;
+
+  meterArrObject: { rate: string; ca: string; kw_pk: string }[];
   statusArrObject: { status: string; date: string }[];
   activityArrObject: { activity: string; date: string }[];
 };

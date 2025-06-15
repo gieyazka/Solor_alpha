@@ -24,6 +24,7 @@ import clsx from "clsx";
 import dayjs from "dayjs";
 import { useForm, SubmitHandler, useFieldArray } from "react-hook-form";
 import {
+  activityOption,
   connectLevel,
   coopLevel,
   decideLevel,
@@ -36,9 +37,15 @@ import {
   structureLevel,
   understandLevel,
 } from "@/utils/options";
+import _ from "lodash";
+import { columnToLetter } from "@/utils/excel";
+import { updateMasterData } from "@/actions/excel";
 export default function SolarCellForm() {
   const masterStore = useSchoolStore();
-
+  // console.log(
+  //   "masterStore.",
+  //   Object.keys(_.groupBy(masterStore.masterData, "ชื่อโรงเรียน")).length
+  // );
   const [formData, setFormData] = useState<Partial<SchoolData>>({});
 
   const {
@@ -53,6 +60,7 @@ export default function SolarCellForm() {
     defaultValues: {
       statusArrObject: [{ status: "", date: "" }],
       activityArrObject: [{ activity: "", date: "" }],
+      meterArrObject: [{ ca: "", kw_pk: "", rate: "" }],
     },
   });
 
@@ -64,8 +72,44 @@ export default function SolarCellForm() {
       [name]: value,
     }));
   };
-  const onSubmit: SubmitHandler<Partial<SchoolData>> = (data) => {
-    console.log(data);
+  const onSubmit: SubmitHandler<Partial<SchoolData>> = async (data) => {
+    const formulaColumns = ["id"]; // หรือ 'A' ถ้าคุณ map เป็น column letter
+    const filteredHeaders = masterStore.headers.filter(
+      (h) => !formulaColumns.includes(h)
+    );
+    const startColLetter = columnToLetter(2);
+    const endColLetter = columnToLetter(filteredHeaders.length + 1);
+
+    const rowUpdate = parseInt(String(data.id), 10) + 1;
+    const rowData = filteredHeaders.map((key) => {
+      if (key === "meterArr") {
+        return data.meterArrObject?.[0].ca !== ""
+          ? JSON.stringify(data.meterArrObject)
+          : "";
+      }
+      if (key === "statusArr") {
+        return data.statusArrObject?.[0].status !== ""
+          ? JSON.stringify(data.statusArrObject)
+          : "";
+      }
+      if (key === "activityArr") {
+        return data.activityArrObject?.[0].activity !== ""
+          ? JSON.stringify(data.meterArrObject)
+          : "";
+      }
+      return data[key as keyof SchoolData] ?? "";
+    });
+
+    await updateMasterData({
+      data: rowData as string[],
+      endColumn: endColLetter,
+      row: rowUpdate,
+      startColumn: startColLetter,
+    });
+
+    // TODO: update data
+
+    reset();
   };
 
   const statusFieldArr = useFieldArray({
@@ -76,20 +120,21 @@ export default function SolarCellForm() {
     control,
     name: "activityArrObject",
   });
+  const meterFieldArr = useFieldArray({
+    control,
+    name: "meterArrObject",
+  });
 
-  // const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-  //   e.preventDefault();
-  //   console.log("Form Data:", formData);
-  //   alert("ข้อมูลถูกบันทึกแล้ว");
-  // };
-
-  const handleChangeSchool = (d: SchoolData) => {
-    if (d) {
+  const handleChangeSchool = (data: SchoolData[] | undefined) => {
+    const d = data?.[0];
+    if (d && d.ชื่อโรงเรียน) {
       if (d?.statusArr) {
         const status = JSON.parse(d.statusArr) as {
           status: string;
           date: string;
         }[];
+
+        statusFieldArr.replace(status);
         status.map((d, i) => {
           setValue(`statusArrObject.${i}.status`, d.status);
           setValue(`statusArrObject.${i}.date`, d.date);
@@ -101,10 +146,37 @@ export default function SolarCellForm() {
           activity: string;
           date: string;
         }[];
+        activityFieldArr.replace(status);
         status.map((d, i) => {
           setValue(`activityArrObject.${i}.activity`, d.activity);
           setValue(`activityArrObject.${i}.date`, d.date);
         });
+      }
+      const findSchoolByKey = masterStore.masterDataKey[d.ชื่อโรงเรียน];
+      if (findSchoolByKey[0].meterArr === "") {
+        const meterData: {
+          ca: string;
+          kw_pk: string;
+          rate: string;
+        }[] = [];
+        findSchoolByKey.forEach((school) => {
+          meterData.push({
+            ca: String(school.CA),
+            kw_pk: String(school.KW_PK),
+            rate: String(school["อัตรา"]),
+          });
+        });
+
+        meterFieldArr.replace(meterData);
+        // meterData.map((d, i) => {
+        //   setValue(`meterArrObject.${i}.ca`, d.ca);
+        //   setValue(`meterArrObject.${i}.kw_pk`, d.kw_pk);
+        //   setValue(`meterArrObject.${i}.rate`, d.rate);
+        // });
+      } else {
+        // TODO: set
+        const meterData = JSON.parse(findSchoolByKey[0].meterArr);
+        meterFieldArr.replace(meterData);
       }
 
       Object.keys(d).forEach((k) => {
@@ -126,6 +198,7 @@ export default function SolarCellForm() {
     "สภาพวัสดุมุงหลังคา (10%)",
     "สภาพโครงสร้าง (10%)",
     "จุดเชื่อมต่อและการเดินสายไฟ (10%)",
+    "การเข้าถึงหน้างาน (10%)",
   ]);
 
   useEffect(() => {
@@ -150,7 +223,6 @@ export default function SolarCellForm() {
 
   return (
     <div className="pt-2 min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 pb-8">
-  
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
@@ -181,7 +253,7 @@ export default function SolarCellForm() {
                 <div>
                   <label className={labelClasses}>ชื่อโรงเรียน</label>
                   <ScoolAutoComplete
-                    masterData={masterStore.masterData}
+                    masterDataKey={masterStore.masterDataKey}
                     handleChangeSchool={handleChangeSchool}
                   />
                 </div>
@@ -261,8 +333,18 @@ export default function SolarCellForm() {
                     {...register("จำนวนนักเรียน")}
                   />
                 </div>
+                <div>
+                  <label className={labelClasses}>ค่าฟ้าเฉลี่ย/เดือน</label>
+                  <input
+                    type="number"
+                    className={inputClasses}
+                    placeholder="บาท/เดือน"
+                    step="0.01"
+                    {...register("ค่าฟ้าเฉลี่ย/เดือน")}
+                  />
+                </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                 <div>
                   <label className={labelClasses}>สังกัด</label>
                   <input
@@ -277,50 +359,94 @@ export default function SolarCellForm() {
                   <input
                     type="text"
                     className={inputClasses}
-                    placeholder="เขตการไฟฟ้าส่วนภูมิภาค"
+                    placeholder="เขต"
                     {...register("เขต")}
                   />
                 </div>
                 <div>
-                  <label className={labelClasses}>อัตรา</label>
+                  <label className={labelClasses}>กฟภ.</label>
                   <input
                     type="text"
                     className={inputClasses}
-                    placeholder="อัตรา"
-                    {...register("อัตรา")}
-                  />
-                </div>
-                <div>
-                  <label className={labelClasses}>CA</label>
-                  <input
-                    type="text"
-                    className={inputClasses}
-                    placeholder="CA"
-                    {...register("CA")}
-                  />
-                </div>
-
-                <div>
-                  <label className={labelClasses}>KW_PK</label>
-                  <input
-                    type="number"
-                    className={inputClasses}
-                    placeholder="กำลังไฟฟ้า (KW)"
-                    step="0.1"
-                    {...register("KW_PK")}
-                  />
-                </div>
-                <div>
-                  <label className={labelClasses}>ค่าฟ้าเฉลี่ย/เดือน</label>
-                  <input
-                    type="number"
-                    className={inputClasses}
-                    placeholder="บาท/เดือน"
-                    step="0.01"
-                    {...register("ค่าฟ้าเฉลี่ย/เดือน")}
+                    placeholder="กฟภ."
+                    {...register("กฟภ.")}
                   />
                 </div>
               </div>
+
+              {meterFieldArr.fields.map((data, index) => {
+                return (
+                  <div
+                    key={data.id}
+                    className="flex sm:flex-row flex-col gap-2"
+                  >
+                    <div className="flex-1">
+                      {index === 0 && (
+                        <label className={labelClasses}>อัตรา</label>
+                      )}
+                      <input
+                        type="text"
+                        className={inputClasses}
+                        placeholder="อัตรา"
+                        {...register(`meterArrObject.${index}.rate`)}
+                      />
+                    </div>
+                    <div className="flex-1">
+                      {index === 0 && (
+                        <label className={labelClasses}>CA</label>
+                      )}
+                      <input
+                        type="text"
+                        className={inputClasses}
+                        placeholder="CA"
+                        {...register(`meterArrObject.${index}.ca`)}
+                      />
+                    </div>
+
+                    <div className="flex-1">
+                      {index === 0 && (
+                        <label className={labelClasses}>KW_PK</label>
+                      )}
+                      <input
+                        // type="text"
+                        className={inputClasses}
+                        placeholder="กำลังไฟฟ้า (KW)"
+                        // step="0.1"
+                        {...register(`meterArrObject.${index}.kw_pk`)}
+                      />
+                    </div>
+                    <div className="pb-1 flex gap-2 items-end">
+                      {index !== 0 ? (
+                        <Button
+                          onClick={() => meterFieldArr.remove(index)}
+                          color="error"
+                          className="h-fit  "
+                          variant="contained"
+                        >
+                          {" "}
+                          <X className="" />{" "}
+                        </Button>
+                      ) : (
+                        <div className="w-16"></div>
+                      )}
+                      <Button
+                        onClick={() =>
+                          meterFieldArr.append({
+                            ca: "",
+                            kw_pk: "",
+                            rate: "",
+                          })
+                        }
+                        className="h-fit "
+                        variant="contained"
+                      >
+                        {" "}
+                        <X className="rotate-45" />{" "}
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -480,7 +606,7 @@ export default function SolarCellForm() {
             <div>
               <label className={labelClasses}>การดำเนินงาน</label>
               <textarea
-                className={`${inputClasses} h-24 resize-none`}
+                className={`${inputClasses} h-12`}
                 placeholder="การดำเนินงาน"
                 {...register("การดำเนินงาน")}
               />
@@ -490,6 +616,7 @@ export default function SolarCellForm() {
                 <label className={labelClasses}>Status</label>
                 {statusFieldArr.fields.map(
                   (data: { status: string; date: string }, index: number) => {
+                    // console.log("data", data);
                     return (
                       <div key={index} className="flex gap-2 ">
                         <select
@@ -509,29 +636,46 @@ export default function SolarCellForm() {
                           placeholder="วันที่"
                           {...register(`statusArrObject.${index}.date`)}
                         />
+
+                        <div className="pb-1 flex gap-2 items-end">
+                          {index !== 0 ? (
+                            <Button
+                              onClick={() => statusFieldArr.remove(index)}
+                              color="error"
+                              className="h-fit  "
+                              variant="contained"
+                            >
+                              {" "}
+                              <X className="" />{" "}
+                            </Button>
+                          ) : (
+                            <div className="w-16"></div>
+                          )}
+                          <Button
+                            onClick={() =>
+                              statusFieldArr.append({
+                                status: "",
+                                date: "",
+                              })
+                            }
+                            className="h-fit "
+                            variant="contained"
+                          >
+                            {" "}
+                            <X className="rotate-45" />{" "}
+                          </Button>
+                        </div>
                       </div>
                     );
                   }
                 )}
-              </div>
-              <div className="pb-1">
-                <Button
-                  className="h-fit"
-                  onClick={() =>
-                    statusFieldArr.append({ status: "", date: "" })
-                  }
-                  variant="contained"
-                >
-                  {" "}
-                  <X className="rotate-45" />{" "}
-                </Button>
               </div>
             </div>
 
             <div className="flex gap-2 mt-4 relative items-end">
               <div className="w-full space-y-2">
                 <label className={labelClasses}>Activity</label>
-                {(watch().activityArrObject || []).map(
+                {activityFieldArr.fields.map(
                   (data: { activity: string; date: string }, index: number) => {
                     return (
                       <div key={index} className="flex gap-2 ">
@@ -540,22 +684,11 @@ export default function SolarCellForm() {
                           {...register(`activityArrObject.${index}.activity`)}
                         >
                           <option value="">เลือกสถานะ</option>
-                          <option value="นำเสนอโครงการ">นำเสนอโครงการ</option>
-                          <option value="ตอบรับเข้าร่วมโครงการ">
-                            ตอบรับเข้าร่วมโครงการ
-                          </option>
-                          <option value="สำรวจ ออกแบบ และประมาณการ">
-                            สำรวจ ออกแบบ และประมาณการ
-                          </option>
-                          <option value="ประเมินโครงการ พร้อมจัดทำข้อเสนอ">
-                            ประเมินโครงการ พร้อมจัดทำข้อเสนอ
-                          </option>
-                          <option value="นำเสนอข้อเสนอโครงการ">
-                            นำเสนอข้อเสนอโครงการ
-                          </option>
-                          <option value="ลงนามสัญญาให้บริการ">
-                            ลงนามสัญญาให้บริการ
-                          </option>
+                          {activityOption.map((d) => (
+                            <option key={d} value={d}>
+                              {d}
+                            </option>
+                          ))}
                         </select>
                         <input
                           type="date"
@@ -563,25 +696,38 @@ export default function SolarCellForm() {
                           placeholder="วันที่"
                           {...register(`activityArrObject.${index}.date`)}
                         />
+                        <div className="pb-1 flex gap-2 items-end">
+                          {index !== 0 ? (
+                            <Button
+                              onClick={() => activityFieldArr.remove(index)}
+                              color="error"
+                              className="h-fit  "
+                              variant="contained"
+                            >
+                              {" "}
+                              <X className="" />{" "}
+                            </Button>
+                          ) : (
+                            <div className="w-16"></div>
+                          )}
+                          <Button
+                            onClick={() =>
+                              activityFieldArr.append({
+                                activity: "",
+                                date: "",
+                              })
+                            }
+                            className="h-fit "
+                            variant="contained"
+                          >
+                            {" "}
+                            <X className="rotate-45" />{" "}
+                          </Button>
+                        </div>
                       </div>
                     );
                   }
                 )}
-              </div>
-              <div className="pb-1">
-                <Button
-                  onClick={() =>
-                    activityFieldArr.append({
-                      activity: "",
-                      date: "",
-                    })
-                  }
-                  className="h-fit "
-                  variant="contained"
-                >
-                  {" "}
-                  <X className="rotate-45" />{" "}
-                </Button>
               </div>
             </div>
           </div>
@@ -750,10 +896,12 @@ export default function SolarCellForm() {
                   </select>
                 </div>
                 <div>
-                  <label className={labelClasses}>สภาพโครงสร้าง (10%)</label>
+                  <label className={labelClasses}>
+                    การเข้าถึงหน้างาน (10%)
+                  </label>
                   <select
                     className={inputClasses}
-                    {...register(`สภาพโครงสร้าง (10%)`)}
+                    {...register(`การเข้าถึงหน้างาน (10%)`)}
                   >
                     <option value="">เลือกสถานะ</option>
                     {easyLevel.map((d) => (
@@ -907,20 +1055,18 @@ export default function SolarCellForm() {
               <div>
                 <label className={labelClasses}>Latitude</label>
                 <input
-                  type="number"
+                  type="text"
                   className={inputClasses}
                   placeholder="ละติจูด"
-                  step="0.000001"
                   {...register("Latitude")}
                 />
               </div>
               <div>
                 <label className={labelClasses}>Longitude</label>
                 <input
-                  type="number"
+                  type="text"
                   className={inputClasses}
                   placeholder="ลองจิจูด"
-                  step="0.000001"
                   {...register("Longitude")}
                 />
               </div>
@@ -972,10 +1118,10 @@ export default function SolarCellForm() {
 }
 
 export const ScoolAutoComplete = (props: {
-  masterData: SchoolData[];
-  handleChangeSchool: (d: SchoolData) => void;
+  masterDataKey: Record<string, SchoolData[]>;
+  handleChangeSchool: (d: SchoolData[] | undefined) => void;
 }) => {
-  const { masterData } = props;
+  const { masterDataKey } = props;
   const [open, setOpen] = React.useState(false);
   const [inputValue, setInputValue] = React.useState("");
 
@@ -994,13 +1140,14 @@ export const ScoolAutoComplete = (props: {
   };
 
   const optionScool = React.useMemo(() => {
+    const cloneData = _.cloneDeep(masterDataKey);
     if (inputValue !== "") {
-      return masterData
-        .filter((d) => d?.["ชื่อโรงเรียน"].includes(inputValue))
+      return Object.keys(cloneData)
+        .filter((key) => key.includes(inputValue))
         .splice(0, 49);
     }
-    return masterData.splice(0, 21);
-  }, [inputValue]);
+    return Object.keys(cloneData).splice(0, 21);
+  }, [inputValue, masterDataKey]);
   // const optionScool = schoolQuery.data?.map((d) => {
   //   return d;
   // });
@@ -1014,11 +1161,16 @@ export const ScoolAutoComplete = (props: {
       onInputChange={(event, value) => {
         setInputValue(value);
       }}
-      isOptionEqualToValue={(option, value) => {
-        return option?.["ชื่อโรงเรียน"] === value?.["ชื่อโรงเรียน"];
-      }}
+      // isOptionEqualToValue={(option, value) => {
+      //   return option?.["ชื่อโรงเรียน"] === value?.["ชื่อโรงเรียน"];
+      // }}
       onChange={(event: any, newValue) => {
-        props.handleChangeSchool(newValue as SchoolData);
+        if (newValue) {
+          const findSchool = masterDataKey[newValue];
+          props.handleChangeSchool(findSchool);
+        } else {
+          props.handleChangeSchool(undefined);
+        }
       }}
       getOptionKey={(option) =>
         typeof option === "object" && option !== null && "id" in option
@@ -1040,10 +1192,19 @@ export const ScoolAutoComplete = (props: {
           // label="ชื่อสถานศึกษา"
           placeholder="ชื่อสถานศึกษา"
           variant="standard"
-          InputLabelProps={{ shrink: true }}
+          // InputLabelProps={{ shrink: true }}
+          onBlur={(event: any) => {
+            // const findSchool = optionScool.find(
+            //   (d) => d.ชื่อโรงเรียน === event.target.value
+            // );
+            const findSchool = masterDataKey[event.target.value];
+
+            props.handleChangeSchool(findSchool);
+          }}
           slotProps={{
             input: {
               ...params.InputProps,
+
               disableUnderline: true,
               className: clsx(
                 params.inputProps?.className, // ✅ สำคัญ: รักษา default class ของ MUI ไว้

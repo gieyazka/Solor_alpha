@@ -56,7 +56,10 @@ export async function loadMasterData() {
       });
       return rowData;
     });
-    return result;
+    return {
+      headers,
+      data: result,
+    };
   } catch (error: any) {
     console.error("❌ โหลดข้อมูลไม่สำเร็จ:", error.message);
     return [];
@@ -99,7 +102,6 @@ export async function loadEvent() {
 export const testFn = async () => {
   const raw = readFileSync("credentials.json", "utf8");
   const base64 = Buffer.from(raw).toString("base64");
-  console.log("base64", base64);
 };
 export async function writeToSheet(data: eventProps) {
   try {
@@ -138,6 +140,44 @@ export async function writeToSheet(data: eventProps) {
     const lineaRes = await sendMessageToLine(data);
     console.log("✅ เขียนข้อมูลลง Google Sheet สำเร็จ");
     return plainResult;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
+export async function updateMasterData(props: {
+  startColumn: string;
+  endColumn: string;
+  row: number;
+  data: string[];
+}) {
+  try {
+    const { endColumn, row, startColumn, data } = props;
+
+    const decoded = Buffer.from(GOOGLESHEET_API_KEY!, "base64").toString(
+      "utf8"
+    );
+
+    const auth = new google.auth.GoogleAuth({
+      credentials: JSON.parse(decoded),
+      scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+    });
+    const sheets = google.sheets({ version: "v4", auth });
+
+    const spreadsheetId = SPREADSHEET_ID; // 👈 จาก URL ของ Google Sheet
+
+    const range = `Masterdata!${startColumn}${row}:${endColumn}${row}`; // หรือ "ชื่อชีต!A1"
+
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: spreadsheetId,
+      range: range, // ช่วง cell ที่ต้องการอัปเดต
+      valueInputOption: "RAW",
+      requestBody: {
+        values: [data],
+      },
+    });
+    console.log("✅ เขียนข้อมูลลง Google Sheet สำเร็จ");
+    return "success";
   } catch (error) {
     console.error(error);
     throw error;

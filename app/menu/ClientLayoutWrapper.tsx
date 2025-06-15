@@ -26,7 +26,10 @@ export default function ClientLayoutWrapper({
   initialData,
   children,
 }: {
-  initialData: SchoolData[];
+  initialData: {
+    headers: string[];
+    data: SchoolData[];
+  };
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -170,7 +173,7 @@ export default function ClientLayoutWrapper({
             isMobile ? "" : `${sidebarOpen ? "ml-64" : "ml-16"}`
           } overflow-y-auto h-screen`}
         >
-          <div className="min-h-screen  bg-white">
+          <div className="min-h-screen overflow-y-hidden  bg-white">
             <div className="mt-16 ">{children}</div>
           </div>
         </div>

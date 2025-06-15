@@ -7,7 +7,7 @@ const prisma = PrismaDB;
 export const getMaster = async () => {
   try {
     const master = await loadMasterData();
-    return master as SchoolData[]
+    return master as { headers: string[]; data: SchoolData[] };
   } catch (error) {
     console.error(error);
     throw error;

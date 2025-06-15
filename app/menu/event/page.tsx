@@ -7,12 +7,11 @@ import "react-big-calendar/lib/css/react-big-calendar.css";
 export const dynamic = "force-dynamic";
 
 const CalendarPage = async () => {
-  const masterData = await getMaster();
 
   const eventData = await loadEvent();
   return (
     <div className="flex flex-col h-screen  ">
-      <RenderEvent masterData={masterData} eventData={eventData} />
+      <RenderEvent eventData={eventData} />
     </div>
   );
 };

@@ -1,8 +1,9 @@
-"use client"
+"use client";
 // stores/schoolStore.ts
 import { eventProps, SchoolData } from "@/@type";
 import { loadEvent } from "@/actions/excel";
 import { getMaster } from "@/actions/school";
+import _ from "lodash";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 
@@ -10,33 +11,43 @@ import { immer } from "zustand/middleware/immer";
 
 type SchoolStore = {
   masterData: SchoolData[];
+  masterDataKey: Record<string, SchoolData[]>;
+  headers: string[];
   isLoading: boolean;
-  setMasterData: (data: SchoolData[]) => void;
-  fetchMasterData: () => Promise<void>; // async fn สำหรับ getMaster()
+  setMasterData: (props: { headers: string[]; data: SchoolData[] }) => void;
+  // fetchMasterData: () => Promise<void>; // async fn สำหรับ getMaster()
 };
 type eventStore = {
   event: eventProps[];
   isLoading: boolean;
 
   setEvent: (data: eventProps[]) => void;
-  fetchEvent: () => Promise<void>; // async fn สำหรับ getMaster()
+  // fetchEvent: () => Promise<void>; // async fn สำหรับ getMaster()
 };
 
 export const useSchoolStore = create<SchoolStore>()(
   immer((set) => ({
     masterData: [],
+    masterDataKey: {},
+    headers: [],
     isLoading: false,
-    setMasterData: (data) => set({ masterData: data }),
-    fetchMasterData: async () => {
-      set((state) => {
-        state.isLoading = true;
-      });
-      const data = await getMaster();
-      set((state) => {
-        state.masterData = data;
-        state.isLoading = false;
+    setMasterData: (data) => {
+      set({
+        headers: data.headers,
+        masterData: data.data,
+        masterDataKey: _.groupBy(data.data, "ชื่อโรงเรียน"),
       });
     },
+    // fetchMasterData: async () => {
+    //   set((state) => {
+    //     state.isLoading = true;
+    //   });
+    //   const data = await getMaster();
+    //   set((state) => {
+    //     state.masterData = data;
+    //     state.isLoading = false;
+    //   });
+    // },
   }))
 );
 

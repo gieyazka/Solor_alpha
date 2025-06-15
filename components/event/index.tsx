@@ -10,13 +10,12 @@ import { getEventByDate } from "@/actions/event";
 import { useQueryClient } from "@tanstack/react-query";
 import { eventProps, SchoolData } from "@/@type";
 import { Event } from "react-big-calendar";
+import { useSchoolStore } from "@/stores";
 
-export const RenderEvent = (props: {
-  masterData: SchoolData[];
-  eventData: eventProps[];
-}) => {
-  const { masterData, eventData } = props;
-
+export const RenderEvent = (props: { eventData: eventProps[] }) => {
+  const { eventData } = props;
+  const schollStore = useSchoolStore();
+  const masterData = schollStore.masterData;
   const keyMaster = Object.fromEntries(masterData.map((d) => [d.id, d]));
 
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -143,7 +142,12 @@ const ModalDetail = (props: {
           },
         }}
       >
-        <Typography variant="h5" fontWeight="bold" gutterBottom color="text.primary">
+        <Typography
+          variant="h5"
+          fontWeight="bold"
+          gutterBottom
+          color="text.primary"
+        >
           📍 {schoolData?.["ชื่อโรงเรียน"]}
         </Typography>
 
@@ -164,7 +168,12 @@ const ModalDetail = (props: {
         </Box>
 
         <Box sx={{ borderTop: "1px solid #ccc", mt: 2, pt: 2 }}>
-          <Typography variant="h6" fontWeight="medium" gutterBottom color="text.primary">
+          <Typography
+            variant="h6"
+            fontWeight="medium"
+            gutterBottom
+            color="text.primary"
+          >
             📅 {data?.title}
           </Typography>
 
