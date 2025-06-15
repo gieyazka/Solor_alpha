@@ -3,6 +3,7 @@ export type SchoolData = {
   ลำดับ: number;
   "ประมาณการติดตั้ง Solar cell": number;
   KW_PK: number;
+  "ตรวจสอบสถานที่": string;
   ชื่อโรงเรียน: string;
   ที่อยู่: string;
   ชื่อตำบล: string;
@@ -22,6 +23,19 @@ export type SchoolData = {
   "ความสนใจ 30%": number;
   "กำลังติดตั้ง 25%": number;
   "Score 10คะแนน": number;
+  "ความเข้าใจในโมเดล ESCO (10%)": number;
+  "ระดับความร่วมมือของโรงเรียน (10%)": number;
+  "การตัดสินใจและอำนาจภายใน (10%)": number;
+  "ความพร้อมในการให้ข้อมูล (10%)": number;
+  "การค้างค่าไฟฟ้า (10%)": number;
+  
+  "พื้นที่ติดตั้งที่มีอยู่ (10%)": number;
+  "สภาพวัสดุมุงหลังคา (10%)": number;
+  "สภาพโครงสร้าง (10%)": number;
+  "จุดเชื่อมต่อและการเดินสายไฟ (10%)": number;
+  "การเข้าถึงหน้างาน (10%)": number;
+  รวมคะแนน: number;
+
   การดำเนินงาน: string;
   "E-mail": string;
   วันที่ดำเนินการ: string;
@@ -52,6 +66,10 @@ export type SchoolData = {
   Latitude: number;
   Longitude: number;
   chk: string;
+  statusArr: string;
+  activityArr: string;
+  statusArrObject: { status: string; date: string }[];
+  activityArrObject: { activity: string; date: string }[];
 };
 
 export type eventProps = {

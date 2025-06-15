@@ -5,6 +5,7 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -19,3 +20,13 @@ body {
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
 }
+input,
+select,
+textarea {
+  /* -webkit-text-fill-color: black !important; */
+  color: black !important;
+  background-color: white !important;
+  caret-color: black !important;
+}
+
+

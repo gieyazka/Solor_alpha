@@ -64,24 +64,6 @@ export async function loadMasterData() {
 }
 export async function loadEvent() {
   try {
-    // console.time("⏳ โหลดข้อมูลจาก OneDrive");
-    // console.log("📥 กำลังโหลดข้อมูลจาก OneDrive...");
-    // const SHEET = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&gid=1992953452`;
-    // const response = await axios.get(SHEET);
-    // let data = response.data;
-    // data = JSON.parse(data.substr(47).slice(0, -2));
-    // const headers = data.table.cols.map((col: any) => col.label);
-    // const jsonData = data.table.rows.map((row: any, index: any) => {
-    //   let obj: Record<string, any> = {};
-    //   row.c.forEach((cell: any, index: any) => {
-    //     obj[headers[index]] = cell ? cell.v : ""; // กรองค่า null ออก
-    //   });
-    //   return obj;
-    // });
-    // console.log("✅ โหลดข้อมูลสำเร็จ!");
-    // console.timeEnd("⏳ โหลดข้อมูลจาก OneDrive");
-
-    // return jsonData;
     const decoded = Buffer.from(GOOGLESHEET_API_KEY!, "base64").toString(
       "utf8"
     );
@@ -108,7 +90,7 @@ export async function loadEvent() {
       });
       return rowData;
     });
-    return result;
+    return result as unknown as eventProps[];
   } catch (error: any) {
     console.error("❌ โหลดข้อมูลไม่สำเร็จ:", error.message);
     return [];

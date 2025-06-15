@@ -47,18 +47,20 @@ export const RenderEvent = (props: {
   const handleChangeDate = (e: Date) => {
     setCurrentDate(e);
   };
-  const event: Event[] = eventData?.map((d) => {
-    const schoolData = keyMaster?.[d.school_id?.toString()];
-    return {
-      title: schoolData?.["ชื่อโรงเรียน"],
-      start: dayjs(d.date).toDate(), // 10 มิ.ย. 2025 10:00
-      end: dayjs(d.date).toDate(), // 10 มิ.ย. 2025 11:00
-      allDay: false,
-      resource: { ...d, schoolData },
-      color: "red", // ฟิลด์กำหนดสีเอง
-      id: d.id,
-    };
-  }).filter(d=> d?.title !== undefined);
+  const event: Event[] = eventData
+    ?.map((d) => {
+      const schoolData = keyMaster?.[d.school_id?.toString()];
+      return {
+        title: schoolData?.["ชื่อโรงเรียน"],
+        start: dayjs(d.date).toDate(), // 10 มิ.ย. 2025 10:00
+        end: dayjs(d.date).toDate(), // 10 มิ.ย. 2025 11:00
+        allDay: false,
+        resource: { ...d, schoolData },
+        color: "red", // ฟิลด์กำหนดสีเอง
+        id: d.id,
+      };
+    })
+    .filter((d) => d?.title !== undefined);
   // const eventData = eventQuery.data?.map((d) => {
   //   return {
   //     title: d.master_data.school_name,
@@ -90,7 +92,7 @@ export const RenderEvent = (props: {
         data={eventModal.data}
       />
       <EventForm
-           keyMaster={keyMaster}
+        keyMaster={keyMaster}
         masterData={masterData}
         refetchEvent={refetchEvent}
         handleClose={onCloseForm}
@@ -141,7 +143,7 @@ const ModalDetail = (props: {
           },
         }}
       >
-        <Typography variant="h5" fontWeight="bold" gutterBottom>
+        <Typography variant="h5" fontWeight="bold" gutterBottom color="text.primary">
           📍 {schoolData?.["ชื่อโรงเรียน"]}
         </Typography>
 
@@ -162,21 +164,19 @@ const ModalDetail = (props: {
         </Box>
 
         <Box sx={{ borderTop: "1px solid #ccc", mt: 2, pt: 2 }}>
-          <Typography variant="h6" fontWeight="medium" gutterBottom>
+          <Typography variant="h6" fontWeight="medium" gutterBottom color="text.primary">
             📅 {data?.title}
           </Typography>
 
-          <Typography variant="body1">
+          <Typography variant="body1" color="text.secondary">
             วันเวลา:{" "}
-            <strong>
-              {data?.date
-                ? dayjs(data.date).format("DD MMMM YYYY เวลา HH:mm")
-                : "-"}
-            </strong>
+            {data?.date
+              ? dayjs(data.date).format("DD MMMM YYYY เวลา HH:mm")
+              : "-"}
           </Typography>
 
           {data?.description && (
-            <Typography variant="body2" sx={{ mt: 1 }} color="text.secondary">
+            <Typography variant="body2" sx={{ mt: 1 }} color="text-black">
               {data.description}
             </Typography>
           )}

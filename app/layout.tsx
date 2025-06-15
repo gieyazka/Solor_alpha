@@ -24,7 +24,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="bg-white text-black" >
       <head>
         <link rel="manifest" href="/manifest.json?v=2" />
         <link rel="icon" href="/icons/icon-192x192.png" />
@@ -34,6 +34,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <Providers>{children}</Providers>
+        
       </body>
     </html>
   );
