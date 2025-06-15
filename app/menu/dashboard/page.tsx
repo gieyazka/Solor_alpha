@@ -334,16 +334,16 @@ function Dashboard() {
                         <div className="flex items-center justify-center space-x-1">
                           {[1, 2, 3, 4, 5, 6, 7]?.map((stepIndex: number) => (
                             <Tooltip
+                              key={`${item.id}_${stepIndex}`}
+                              enterTouchDelay={100}
+                              leaveTouchDelay={3000}
                               title={
                                 status[stepIndex - 1]
                                   ? status[stepIndex - 1].status
                                   : undefined
                               }
                             >
-                              <div
-                                key={`${item.id}_${stepIndex}`}
-                                className="flex items-center"
-                              >
+                              <div className="flex items-center">
                                 <div
                                   className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium ${getStatusColor(
                                     stepIndex,
