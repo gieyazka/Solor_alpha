@@ -69,6 +69,18 @@ export type SchoolData = {
   statusArr: string;
   activityArr: string;
   meterArr: string;
+  หมายเหตุของโรงเรียน: string;
+  หมายเหตุของพื้นที่: string;
+  เลขที่หนังสือ: string;
+  วันที่หนังสือ: string;
+  "เลขที่ ศธ ข้อเสนอ": string;
+  วันที่ข้อเสนอ: string;
+  เลขที่ใบปะหน้า: string;
+  วันที่ใบปะหน้า: string;
+  รวมKW_PK: string;
+  "link ข้อเสนอโครงการ": string;
+  "link หนังสือเชิญ": string;
+  "link หนังสือตอบรับข้อเสนอ": string;
 
   meterArrObject: { rate: string; ca: string; kw_pk: string }[];
   statusArrObject: { status: string; date?: string }[];

@@ -22,7 +22,12 @@ import { SchoolData } from "@/@type";
 import { Autocomplete, Button, TextField } from "@mui/material";
 import clsx from "clsx";
 import dayjs from "dayjs";
-import { useForm, SubmitHandler, useFieldArray } from "react-hook-form";
+import {
+  useForm,
+  SubmitHandler,
+  useFieldArray,
+  Controller,
+} from "react-hook-form";
 import {
   activityOption,
   connectLevel,
@@ -40,6 +45,7 @@ import {
 import _ from "lodash";
 import { columnToLetter } from "@/utils/excel";
 import { updateMasterData } from "@/actions/excel";
+import { formatNumber, parseNumber } from "@/utils/fn";
 export default function SolarCellForm() {
   const masterStore = useSchoolStore();
   // console.log(
@@ -147,24 +153,47 @@ export default function SolarCellForm() {
         });
       }
       const findSchoolByKey = masterStore.masterDataKey[d.ชื่อโรงเรียน];
+
+      Object.keys(d).forEach((k) => {
+        const key: keyof SchoolData = k as keyof SchoolData;
+        setValue(key, d[key]);
+      });
+
       if (findSchoolByKey[0].meterArr === "") {
         const meterData: {
           ca: string;
           kw_pk: string;
           rate: string;
         }[] = [];
+        let sumPk = 0;
         findSchoolByKey.forEach((school) => {
           meterData.push({
             ca: String(school.CA),
             kw_pk: String(school.KW_PK),
             rate: String(school["อัตรา"]),
           });
+          sumPk += Number(school.KW_PK) || 0;
         });
-
+        setValue("รวมKW_PK", String(sumPk));
         meterFieldArr.replace(meterData);
       } else {
         const meterData = JSON.parse(findSchoolByKey[0].meterArr);
         meterFieldArr.replace(meterData);
+
+        if (
+          findSchoolByKey[0]["รวมKW_PK"] !== "" &&
+          findSchoolByKey[0]["รวมKW_PK"] !== undefined
+        ) {
+          setValue("รวมKW_PK", findSchoolByKey[0]["รวมKW_PK"]);
+        } else {
+          let sumPk = 0;
+          meterData.forEach(
+            (meter: { ca: string; kw_pk: string; rate: string }) => {
+              sumPk += Number(meter.kw_pk) || 0;
+            }
+          );
+          setValue("รวมKW_PK", String(sumPk));
+        }
       }
 
       if (findSchoolByKey[0].statusArr === "") {
@@ -219,15 +248,17 @@ export default function SolarCellForm() {
           setValue(`activityArrObject.${i}.date`, d.date);
         });
       }
-
-      Object.keys(d).forEach((k) => {
-        const key: keyof SchoolData = k as keyof SchoolData;
-        setValue(key, d[key]);
-      });
     } else {
       reset();
     }
   };
+
+  const meterValues = watch("meterArrObject");
+  useEffect(() => {
+    const sum = _.sumBy(meterValues, (item) => parseFloat(item.kw_pk));
+    setValue("รวมKW_PK", String(isNaN(sum) ? "" : sum));
+  }, [meterValues]);
+
   const watchedValues = watch([
     "ความเข้าใจในโมเดล ESCO (10%)",
     "การตัดสินใจและอำนาจภายใน (10%)",
@@ -240,7 +271,6 @@ export default function SolarCellForm() {
     "จุดเชื่อมต่อและการเดินสายไฟ (10%)",
     "การเข้าถึงหน้างาน (10%)",
   ]);
-
   useEffect(() => {
     let score = 0;
 
@@ -260,7 +290,6 @@ export default function SolarCellForm() {
     "block text-sm sm:text-base font-medium text-gray-700 mb-1 sm:mb-2";
   const sectionClasses =
     "bg-white rounded-xl shadow-lg p-4 sm:p-6 lg:p-8 border border-gray-100";
-
   return (
     <div className="pt-2 min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 pb-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -374,13 +403,25 @@ export default function SolarCellForm() {
                   />
                 </div>
                 <div>
-                  <label className={labelClasses}>ค่าฟ้าเฉลี่ย/เดือน</label>
-                  <input
-                    type="number"
-                    className={inputClasses}
-                    placeholder="บาท/เดือน"
-                    step="0.01"
-                    {...register("ค่าฟ้าเฉลี่ย/เดือน")}
+                  <label className={labelClasses}>ค่าไฟเฉลี่ย/เดือน</label>
+                  <Controller
+                    name="ค่าฟ้าเฉลี่ย/เดือน"
+                    control={control}
+                    render={({ field }) => (
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        className={inputClasses}
+                        placeholder="บาท/เดือน"
+                        value={field.value || ""}
+                        onChange={(e) => {
+                          const raw = e.target.value.replace(/,/g, "");
+
+                          const withComma = formatNumber(raw);
+                          field.onChange(withComma);
+                        }}
+                      />
+                    )}
                   />
                 </div>
               </div>
@@ -410,6 +451,16 @@ export default function SolarCellForm() {
                     className={inputClasses}
                     placeholder="กฟภ."
                     {...register("กฟภ.")}
+                  />
+                </div>
+                <div>
+                  <label className={labelClasses}>รวมKW_PK</label>
+                  <input
+                    readOnly={true}
+                    type="text"
+                    className={inputClasses}
+                    placeholder="รวมKW_PK"
+                    {...register("รวมKW_PK")}
                   />
                 </div>
               </div>
@@ -448,11 +499,29 @@ export default function SolarCellForm() {
                         <label className={labelClasses}>KW_PK</label>
                       )}
                       <input
-                        // type="text"
+                        type="number"
+                        inputMode="numeric"
                         className={inputClasses}
                         placeholder="กำลังไฟฟ้า (KW)"
-                        // step="0.1"
+                        step="0.1"
                         {...register(`meterArrObject.${index}.kw_pk`)}
+                        onChange={(e) => {
+                          const input = e.target.value;
+
+                          let total = _.sumBy(
+                            _.filter(
+                              meterFieldArr.fields,
+                              (_v, i) => i !== index
+                            ),
+                            "kw_pk"
+                          );
+
+                          const sum =
+                            (Number(total) || 0) + (Number(input) || 0);
+
+                          setValue("รวมKW_PK", String(sum));
+                          setValue(`meterArrObject.${index}.kw_pk`, input);
+                        }}
                       />
                     </div>
                     <div className="pb-1 flex gap-2 items-end">
@@ -867,6 +936,15 @@ export default function SolarCellForm() {
                   </select>
                 </div>
               </div>
+              <div className="mt-4">
+                <label className={labelClasses}>หมายเหตุ</label>
+                <input
+                  type="text"
+                  className={inputClasses}
+                  placeholder="หมายเหตุ"
+                  {...register("หมายเหตุของโรงเรียน")}
+                />
+              </div>
             </div>
 
             <div className="mt-4 sm:mt-6">
@@ -907,6 +985,7 @@ export default function SolarCellForm() {
                     ))}
                   </select>
                 </div>
+
                 <div>
                   <label className={labelClasses}>สภาพโครงสร้าง (10%)</label>
                   <select
@@ -953,6 +1032,15 @@ export default function SolarCellForm() {
                     ))}
                   </select>
                 </div>
+              </div>
+              <div className="mt-4">
+                <label className={labelClasses}>หมายเหตุ</label>
+                <input
+                  type="text"
+                  className={inputClasses}
+                  placeholder="หมายเหตุ"
+                  {...register("หมายเหตุของพื้นที่")}
+                />
               </div>
             </div>
 
@@ -1017,8 +1105,10 @@ export default function SolarCellForm() {
                 />
               </div> */}
             </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">
+              ใบตอบรับหนังสือเชิญ
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
               <div>
                 <label className={labelClasses}>เลขที่</label>
                 <input
@@ -1037,8 +1127,6 @@ export default function SolarCellForm() {
                   {...register("วันที่")}
                 />
               </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mt-4 sm:mt-6">
               <div>
                 <label className={labelClasses}>เลขที่ ศธ.</label>
                 <input
@@ -1057,6 +1145,68 @@ export default function SolarCellForm() {
                 />
               </div>
             </div>
+            <h3 className="text-base sm:text-lg font-semibold  text-gray-800 mt-4 mb-3 sm:mb-4">
+              ใบปะหน้าข้อเสนอ
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2 sm:gap-4">
+              <div>
+                <label className={labelClasses}>เลขที่ มท</label>
+                <input
+                  type="text"
+                  className={inputClasses}
+                  placeholder="เลขที่ มท"
+                  {...register("เลขที่ใบปะหน้า")}
+                />
+              </div>
+
+              <div>
+                <label className={labelClasses}>วันที่</label>
+                <input
+                  type="date"
+                  className={inputClasses}
+                  {...register("วันที่ใบปะหน้า")}
+                />
+              </div>
+            </div>
+            <h3 className="text-base sm:text-lg font-semibold  text-gray-800 mt-4 mb-3 sm:mb-4">
+              ใบตอบรับข้อเสนอและร่างสัญญา
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2 sm:gap-4">
+              <div>
+                <label className={labelClasses}>เลขที่</label>
+                <input
+                  type="text"
+                  className={inputClasses}
+                  placeholder="เลขที่เอกสาร ศธ."
+                  {...register("เลขที่หนังสือ")}
+                />
+              </div>
+              <div>
+                <label className={labelClasses}>วันที่ตอบกลับ</label>
+                <input
+                  type="date"
+                  className={inputClasses}
+                  {...register("วันที่หนังสือ")}
+                />
+              </div>
+              <div>
+                <label className={labelClasses}>เลขที่ ศธ.</label>
+                <input
+                  type="text"
+                  className={inputClasses}
+                  placeholder="เลขที่เอกสาร ศธ."
+                  {...register("เลขที่ ศธ ข้อเสนอ")}
+                />
+              </div>
+              <div>
+                <label className={labelClasses}>วันที่ตอบกลับ</label>
+                <input
+                  type="date"
+                  className={inputClasses}
+                  {...register("วันที่ข้อเสนอ")}
+                />
+              </div>
+            </div>
 
             <div className="mt-4 sm:mt-6">
               <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">
@@ -1066,21 +1216,40 @@ export default function SolarCellForm() {
                 <div>
                   <label className={labelClasses}>Simulation</label>
                   <textarea
-                    className={`${inputClasses} h-24 resize-none`}
+                    className={`${inputClasses} h-12 `}
                     placeholder="รายละเอียดการจำลอง"
                     {...register("Simulation")}
                   />
                 </div>
-                {/* <div>
-                  <label className={labelClasses}>ข้อเสนอโครงการ</label>
-                  <textarea
-                    name="projectProposal"
-                    value={formData["ข้อเสนอโครงการ"] || ""}
-                    onChange={handleInputChange}
-                    className={`${inputClasses} h-24 resize-none`}
-                    placeholder="รายละเอียดข้อเสนอโครงการ"
+                <div>
+                  <label className={labelClasses}>Link หนังสือเชิญ</label>
+
+                  <input
+                    type="text"
+                    className={inputClasses}
+                    {...register("link หนังสือเชิญ")}
                   />
-                </div> */}
+                </div>
+                <div>
+                  <label className={labelClasses}>
+                    Link หนังสือตอบรับข้อเสนอ
+                  </label>
+
+                  <input
+                    type="text"
+                    className={inputClasses}
+                    {...register("link หนังสือตอบรับข้อเสนอ")}
+                  />
+                </div>
+                <div>
+                  <label className={labelClasses}>Link ข้อเสนอโครงการ</label>
+
+                  <input
+                    type="text"
+                    className={inputClasses}
+                    {...register("link ข้อเสนอโครงการ")}
+                  />
+                </div>
               </div>
             </div>
           </div>
