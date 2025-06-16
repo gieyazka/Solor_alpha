@@ -168,7 +168,7 @@ export async function updateMasterData(props: {
 
     const range = `Masterdata!${startColumn}${row}:${endColumn}${row}`; // หรือ "ชื่อชีต!A1"
 
-    await sheets.spreadsheets.values.update({
+    const res = await sheets.spreadsheets.values.update({
       spreadsheetId: spreadsheetId,
       range: range, // ช่วง cell ที่ต้องการอัปเดต
       valueInputOption: "RAW",
@@ -177,7 +177,7 @@ export async function updateMasterData(props: {
       },
     });
     console.log("✅ เขียนข้อมูลลง Google Sheet สำเร็จ");
-    return "success";
+    return res.body;
   } catch (error) {
     console.error(error);
     throw error;

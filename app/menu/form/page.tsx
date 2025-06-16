@@ -83,24 +83,27 @@ export default function SolarCellForm() {
     const rowUpdate = parseInt(String(data.id), 10) + 1;
     const rowData = filteredHeaders.map((key) => {
       if (key === "meterArr") {
-        return data.meterArrObject?.[0].ca !== ""
+        return data.meterArrObject?.[0].ca !== "" &&
+          data.meterArrObject?.[0].ca !== undefined
           ? JSON.stringify(data.meterArrObject)
           : "";
       }
       if (key === "statusArr") {
-        return data.statusArrObject?.[0].status !== ""
+        return data.statusArrObject?.[0].status !== "" &&
+          data.statusArrObject?.[0].status !== undefined
           ? JSON.stringify(data.statusArrObject)
           : "";
       }
       if (key === "activityArr") {
-        return data.activityArrObject?.[0].activity !== ""
-          ? JSON.stringify(data.meterArrObject)
+        return data.activityArrObject?.[0].activity !== "" &&
+          data.activityArrObject?.[0].activity !== undefined
+          ? JSON.stringify(data.activityArrObject)
           : "";
       }
       return data[key as keyof SchoolData] ?? "";
     });
 
-    await updateMasterData({
+    const res = await updateMasterData({
       data: rowData as string[],
       endColumn: endColLetter,
       row: rowUpdate,
@@ -108,8 +111,12 @@ export default function SolarCellForm() {
     });
 
     // TODO: update data
-
-    reset();
+    alert("✅ เขียนข้อมูลสำเร็จ");
+    masterStore.updateData({
+      id: String(data.id),
+      data: rowData as string[],
+    });
+    // reset();
   };
 
   const statusFieldArr = useFieldArray({
@@ -128,19 +135,6 @@ export default function SolarCellForm() {
   const handleChangeSchool = (data: SchoolData[] | undefined) => {
     const d = data?.[0];
     if (d && d.ชื่อโรงเรียน) {
-      if (d?.statusArr) {
-        const status = JSON.parse(d.statusArr) as {
-          status: string;
-          date: string;
-        }[];
-
-        statusFieldArr.replace(status);
-        status.map((d, i) => {
-          setValue(`statusArrObject.${i}.status`, d.status);
-          setValue(`statusArrObject.${i}.date`, d.date);
-        });
-      }
-
       if (d?.activityArr) {
         const status = JSON.parse(d.activityArr) as {
           activity: string;
@@ -168,15 +162,62 @@ export default function SolarCellForm() {
         });
 
         meterFieldArr.replace(meterData);
-        // meterData.map((d, i) => {
-        //   setValue(`meterArrObject.${i}.ca`, d.ca);
-        //   setValue(`meterArrObject.${i}.kw_pk`, d.kw_pk);
-        //   setValue(`meterArrObject.${i}.rate`, d.rate);
-        // });
       } else {
-        // TODO: set
         const meterData = JSON.parse(findSchoolByKey[0].meterArr);
         meterFieldArr.replace(meterData);
+      }
+
+      if (findSchoolByKey[0].statusArr === "") {
+        const statusData: {
+          status: string;
+          date?: string;
+        }[] = [];
+        findSchoolByKey.forEach((school) => {
+          console.log("school", school.Status);
+          statusData.push({
+            status: String(school.Status),
+            date: "",
+          });
+          setValue(`statusArrObject.${0}.status`, String(school.Status));
+          setValue(`statusArrObject.${0}.date`, "");
+        });
+        statusFieldArr.replace(statusData);
+      } else {
+        const status = JSON.parse(d.statusArr) as {
+          status: string;
+          date: string;
+        }[];
+        statusFieldArr.replace(status);
+        status.map((d, i) => {
+          setValue(`statusArrObject.${i}.status`, d.status);
+          setValue(`statusArrObject.${i}.date`, d.date);
+        });
+      }
+
+      if (findSchoolByKey[0].activityArr === "") {
+        const statusData: {
+          activity: string;
+          date?: string;
+        }[] = [];
+        findSchoolByKey.forEach((school) => {
+          statusData.push({
+            activity: String(school.activity),
+            date: "",
+          });
+          setValue(`activityArrObject.${0}.activity`, String(school.activity));
+          setValue(`activityArrObject.${0}.date`, "");
+        });
+        activityFieldArr.replace(statusData);
+      } else {
+        const status = JSON.parse(d.activityArr) as {
+          activity: string;
+          date: string;
+        }[];
+        activityFieldArr.replace(status);
+        status.map((d, i) => {
+          setValue(`activityArrObject.${i}.activity`, d.activity);
+          setValue(`activityArrObject.${i}.date`, d.date);
+        });
       }
 
       Object.keys(d).forEach((k) => {
@@ -187,7 +228,6 @@ export default function SolarCellForm() {
       reset();
     }
   };
-
   const watchedValues = watch([
     "ความเข้าใจในโมเดล ESCO (10%)",
     "การตัดสินใจและอำนาจภายใน (10%)",
@@ -615,8 +655,7 @@ export default function SolarCellForm() {
               <div className="w-full space-y-2">
                 <label className={labelClasses}>Status</label>
                 {statusFieldArr.fields.map(
-                  (data: { status: string; date: string }, index: number) => {
-                    // console.log("data", data);
+                  (data: { status: string; date?: string }, index: number) => {
                     return (
                       <div key={index} className="flex gap-2 ">
                         <select
@@ -676,7 +715,10 @@ export default function SolarCellForm() {
               <div className="w-full space-y-2">
                 <label className={labelClasses}>Activity</label>
                 {activityFieldArr.fields.map(
-                  (data: { activity: string; date: string }, index: number) => {
+                  (
+                    data: { activity: string; date?: string },
+                    index: number
+                  ) => {
                     return (
                       <div key={index} className="flex gap-2 ">
                         <select

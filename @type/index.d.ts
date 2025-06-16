@@ -71,8 +71,8 @@ export type SchoolData = {
   meterArr: string;
 
   meterArrObject: { rate: string; ca: string; kw_pk: string }[];
-  statusArrObject: { status: string; date: string }[];
-  activityArrObject: { activity: string; date: string }[];
+  statusArrObject: { status: string; date?: string }[];
+  activityArrObject: { activity: string; date?: string }[];
 };
 
 export type eventProps = {
