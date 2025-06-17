@@ -69,7 +69,6 @@ export default function SolarCellForm() {
       meterArrObject: [{ ca: "", kw_pk: "", rate: "" }],
     },
   });
-
   const handleInputChange = (e: React.ChangeEvent<any>) => {
     const { name, value } = e.target;
     console.log(name, value);
@@ -79,6 +78,7 @@ export default function SolarCellForm() {
     }));
   };
   const onSubmit: SubmitHandler<Partial<SchoolData>> = async (data) => {
+    console.log("data", data);
     const formulaColumns = ["id"]; // หรือ 'A' ถ้าคุณ map เป็น column letter
     const filteredHeaders = masterStore.headers.filter(
       (h) => !formulaColumns.includes(h)
@@ -108,6 +108,10 @@ export default function SolarCellForm() {
       }
       return data[key as keyof SchoolData] ?? "";
     });
+    console.log("rowUpdate", rowUpdate);
+    console.log("endColLetter", endColLetter);
+    console.log("startColumn", startColLetter);
+    console.log("rowData", rowData);
 
     const res = await updateMasterData({
       data: rowData as string[],
