@@ -286,6 +286,7 @@ export default function SolarCellForm() {
   const sectionClasses =
     "bg-white rounded-xl shadow-lg p-4 sm:p-6 lg:p-8 border border-gray-100";
 
+    
   return (
     <div className="pt-2 min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 pb-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
