@@ -503,7 +503,7 @@ export default function SolarCellForm() {
                         inputMode="numeric"
                         className={inputClasses}
                         placeholder="กำลังไฟฟ้า (KW)"
-                        step="0.1"
+                        step="0.001"
                         {...register(`meterArrObject.${index}.kw_pk`)}
                         onChange={(e) => {
                           const input = e.target.value;
