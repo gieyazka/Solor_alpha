@@ -38,7 +38,6 @@ function Dashboard() {
   const [selectedStatus, setSelectedStatus] = useState<string | undefined>(
     undefined
   );
-
   useEffect(() => {
     setPage(1);
 
@@ -52,7 +51,7 @@ function Dashboard() {
         selectedProvince.length === 0 ||
         selectedProvince.includes(s["ชื่อจังหวัด"]);
       const areaMatch =
-        selectedArea.length === 0 || selectedArea.includes(s["กฟภ."]);
+        selectedArea.length === 0 || selectedArea.includes(s["กฟภ"]);
       const schoolMatch =
         selectedSchool.length === 0 ||
         selectedSchool.includes(s["ชื่อโรงเรียน"]);
@@ -64,7 +63,10 @@ function Dashboard() {
               const status: { status: string; date: string }[] = JSON.parse(
                 s.statusArr
               );
-              return _.last(status)?.status === selectedStatus;
+              return status?.some((d) => {
+                return d.status === selectedStatus;
+              });
+              // return _.last(status)?.status === selectedStatus;
             } catch (e) {
               return false;
             }
@@ -83,10 +85,10 @@ function Dashboard() {
         statusMatch
       );
     });
-    console.log(
-      '_.groupBy(filteredData, "ชื่อโรงเรียน")',
-      _.groupBy(filteredData, "ชื่อโรงเรียน")
-    );
+    // console.log(
+    //   '_.groupBy(filteredData, "ชื่อโรงเรียน")',
+    //   _.groupBy(filteredData, "ชื่อโรงเรียน")
+    // );
     setSchoolData(_.groupBy(filteredData, "ชื่อโรงเรียน"));
   }, [
     selectedRegion,
@@ -114,7 +116,7 @@ function Dashboard() {
         selectedProvince.length === 0 ||
         selectedProvince.includes(s["ชื่อจังหวัด"]);
       const areaMatch =
-        selectedArea.length === 0 || selectedArea.includes(s["กฟภ."]);
+        selectedArea.length === 0 || selectedArea.includes(s["กฟภ"]);
       const schoolMatch =
         selectedSchool.length === 0 ||
         selectedSchool.includes(s["ชื่อโรงเรียน"]);
@@ -131,7 +133,7 @@ function Dashboard() {
         selectedProvince.length === 0 ||
         selectedProvince.includes(s["ชื่อจังหวัด"]);
       const areaMatch =
-        selectedArea.length === 0 || selectedArea.includes(s["กฟภ."]);
+        selectedArea.length === 0 || selectedArea.includes(s["กฟภ"]);
       const schoolMatch =
         selectedSchool.length === 0 ||
         selectedSchool.includes(s["ชื่อโรงเรียน"]);
@@ -148,7 +150,7 @@ function Dashboard() {
         selectedDepartment.length === 0 ||
         selectedDepartment.includes(s["สังกัด"]);
       const areaMatch =
-        selectedArea.length === 0 || selectedArea.includes(s["กฟภ."]);
+        selectedArea.length === 0 || selectedArea.includes(s["กฟภ"]);
       const schoolMatch =
         selectedSchool.length === 0 ||
         selectedSchool.includes(s["ชื่อโรงเรียน"]);
@@ -185,7 +187,7 @@ function Dashboard() {
         selectedProvince.length === 0 ||
         selectedProvince.includes(s["ชื่อจังหวัด"]);
       const areaMatch =
-        selectedArea.length === 0 || selectedArea.includes(s["กฟภ."]);
+        selectedArea.length === 0 || selectedArea.includes(s["กฟภ"]);
 
       return regionMatch && departmentMatch && provinceMatch && areaMatch;
     }),
@@ -193,20 +195,19 @@ function Dashboard() {
   );
 
   // Sample data - replace with your actual data
-  const data = Array.from({ length: 12 }, (_, i) => ({
-    id: i + 1,
-    school: "AAA",
-    district: "BBB",
-    province: "CCC",
-    status: [1, 2, 3, 4, 5, 6, 7],
-  }));
 
-  const getStatusColor = (step: number, currentStatus: any) => {
-    if (currentStatus >= step) {
+  const getStatusColor = (check: boolean) => {
+    if (check) {
       return "bg-green-500";
     }
     return "bg-gray-300";
   };
+  // const getStatusColor = (step: number, currentStatus: any) => {
+  //   if (currentStatus >= step) {
+  //     return "bg-green-500";
+  //   }
+  //   return "bg-gray-300";
+  // };
   useEffect(() => {
     setSchoolData(masterData.masterDataKey);
   }, [masterData]);
@@ -271,18 +272,20 @@ function Dashboard() {
               <CustomSingleAutoComplete
                 label="เลือกสถานะ"
                 handleChange={(props) => {
-                  console.log("props", props);
                   setSelectedStatus(props);
                 }}
-                dataKey={_.groupBy(statusOption, (item) => item.split(" ")[0])}
+                dataKey={_.groupBy(
+                  statusOption,
+                  (item) => item.split("12312321213")[0]
+                )}
               />
-              <CustomAutoComplete
+              {/* <CustomAutoComplete
                 label="เลือกการดำเนินการ"
                 handleChange={(props) => {
                   console.log("props", props);
                 }}
                 dataKey={masterData.masterDataKey}
-              />
+              /> */}
               {/* <button className="bg-purple-600 hover:bg-purple-700 text-white px-6  rounded-lg font-medium transition-colors">
                 สร้างรายงาน
               </button> */}
@@ -300,6 +303,9 @@ function Dashboard() {
                 </th>
                 <th className="text-left py-4 px-6 font-medium">จังหวัด</th>
                 <th className="text-left py-4 px-6 font-medium">สังกัด</th>
+                <th className="text-center py-4 px-6 font-medium">
+                  สถานะปัจจุบัน
+                </th>
                 <th className="text-center py-4 px-6 font-medium">สถานะ</th>
                 <th className="text-center py-4 px-6 font-medium">จัดการ</th>
               </tr>
@@ -313,6 +319,7 @@ function Dashboard() {
                   const status = item?.statusArr
                     ? JSON.parse(item?.statusArr)
                     : [];
+                  const groupData = _.groupBy(status, "status");
 
                   return (
                     <tr
@@ -330,40 +337,55 @@ function Dashboard() {
                       <td className="py-2 px-6 text-gray-600">
                         {item["สังกัด"]}
                       </td>
+                      <td className="py-2 px-6 text-gray-600">
+                        {
+                          (_.last(status) as { status: string; date: string })
+                            ?.status
+                        }
+                      </td>
                       <td className="py-2 px-6">
                         <div className="flex items-center justify-center space-x-1">
-                          {[1, 2, 3, 4, 5, 6, 7]?.map((stepIndex: number) => (
-                            <Tooltip
-                              key={`${item.id}_${stepIndex}`}
-                              enterTouchDelay={100}
-                              leaveTouchDelay={3000}
-                              title={
-                                status[stepIndex - 1]
-                                  ? status[stepIndex - 1].status
-                                  : undefined
-                              }
-                            >
-                              <div className="flex items-center">
-                                <div
-                                  className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium ${getStatusColor(
-                                    stepIndex,
-                                    status.length
-                                  )}`}
-                                >
-                                  {status.length >= stepIndex}
-                                  {stepIndex}
+                          {[
+                            "นำเสนอโครงการ",
+                            "ตอบรับเข้าร่วมโครงการ",
+                            "ชี้แจงข้อมูลโครงการและสำรวจพื่นที่",
+                            "ประเมินโครงการพรอมจัดทำข้อเสนอ",
+                            "PEA Approveข้อเสนอ",
+                            "นำเสนอข้อเสนอโครงการ",
+                            "ลงนามสัญญาให้บริการ",
+                            "ยกเลิก",
+                          ]?.map((statusData: string, i) => {
+                            const stepIndex = i + 1;
+                            const checkHaveGroup = groupData[statusData];
+
+                            return (
+                              <Tooltip
+                                key={`${item.id}_${stepIndex}`}
+                                enterTouchDelay={100}
+                                leaveTouchDelay={3000}
+                                title={statusData}
+                              >
+                                <div className="flex items-center">
+                                  <div
+                                    className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium ${getStatusColor(
+                                      checkHaveGroup !== undefined
+                                    )}`}
+                                  >
+                                    {stepIndex}
+                                  </div>
+                                  {/* {stepIndex < status.length - 1 && (
+                                    <div className="w-4 h-0.5 bg-gray-300 mx-1"></div>
+                                  )} */}
                                 </div>
-                                {stepIndex < status.length - 1 && (
-                                  <div className="w-4 h-0.5 bg-gray-300 mx-1"></div>
-                                )}
-                              </div>
-                            </Tooltip>
-                          ))}
+                              </Tooltip>
+                            );
+                          })}
                         </div>
                       </td>
                       <td className="py-2 px-6">
                         <div className="flex items-center justify-center space-x-2">
-                          <button
+                          {/* Coming soon... */}
+                          {/* <button
                             className="p-2 text-green-600 hover:bg-green-50 rounded-full transition-colors"
                             title="ดู"
                           >
@@ -374,13 +396,13 @@ function Dashboard() {
                             title="แก้ไข"
                           >
                             <FileText className="w-4 h-4" />
-                          </button>
-                          <button
+                          </button> */}
+                          {/* <button
                             className="p-2 text-red-600 hover:bg-red-50 rounded-full transition-colors"
                             title="ลบ"
                           >
                             <Trash2 className="w-4 h-4" />
-                          </button>
+                          </button> */}
                         </div>
                       </td>
                     </tr>
@@ -391,7 +413,7 @@ function Dashboard() {
         </div>
 
         {/* Mobile View - Card Layout */}
-        <div className="block md:hidden">
+        {/* <div className="block md:hidden">
           {data.map((item, index) => (
             <div
               key={item.id}
@@ -437,7 +459,7 @@ function Dashboard() {
               </div>
             </div>
           ))}
-        </div>
+        </div> */}
 
         {/* Pagination */}
         <div className="p-6 border-t border-gray-200 flex items-center justify-between">
