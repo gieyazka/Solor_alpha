@@ -15,11 +15,13 @@ import {
   FileText,
   CheckCircle,
   X,
+  Download,
+  FolderOpen,
 } from "lucide-react";
 import AsynSchoolAutoComplete from "@/components/event/school-autocomplete";
 import { useSchoolStore } from "@/stores";
 import { SchoolData } from "@/@type";
-import { Autocomplete, Button, TextField } from "@mui/material";
+import { Autocomplete, Button, IconButton, TextField } from "@mui/material";
 import clsx from "clsx";
 import dayjs from "dayjs";
 import {
@@ -104,20 +106,24 @@ export default function SolarCellForm() {
     // console.log("startColumn", startColLetter);
     // console.log("rowData", rowData);
 
-    const res = await updateMasterData({
-      data: rowData as string[],
-      endColumn: endColLetter,
-      row: rowUpdate,
-      startColumn: startColLetter,
-    });
+    try {
+      const res = await updateMasterData({
+        data: rowData as string[],
+        endColumn: endColLetter,
+        row: rowUpdate,
+        startColumn: startColLetter,
+      });
 
-    // TODO: update data
-    alert("✅ เขียนข้อมูลสำเร็จ");
-    masterStore.updateData({
-      id: String(data.id),
-      data: rowData as string[],
-    });
-    // reset();
+      // TODO: update data
+      alert("✅ เขียนข้อมูลสำเร็จ");
+      masterStore.updateData({
+        id: String(data.id),
+        data: rowData as string[],
+      });
+      // reset();
+    } catch (error) {
+      alert("เขียนข้อมูลไม่สำเร็จ");
+    }
   };
 
   const statusFieldArr = useFieldArray({
@@ -1263,32 +1269,64 @@ export default function SolarCellForm() {
                 </div>
                 <div>
                   <label className={labelClasses}>Link หนังสือเชิญ</label>
-
-                  <input
-                    type="text"
-                    className={inputClasses}
-                    {...register("link หนังสือเชิญ")}
-                  />
+                  <div className="flex gap-2 ">
+                    <input
+                      type="text"
+                      className={inputClasses}
+                      {...register("link หนังสือเชิญ")}
+                    />
+                    <IconButton
+                      onClick={() => {
+                        window.open(watch(`link หนังสือเชิญ`), "_blank");
+                      }}
+                      color="primary"
+                    >
+                      <FolderOpen className="w-5 h-5" />
+                    </IconButton>
+                  </div>
                 </div>
                 <div>
                   <label className={labelClasses}>
                     Link หนังสือตอบรับข้อเสนอ
                   </label>
 
-                  <input
-                    type="text"
-                    className={inputClasses}
-                    {...register("link หนังสือตอบรับข้อเสนอ")}
-                  />
+                  <div className="flex gap-2 ">
+                    <input
+                      type="text"
+                      className={inputClasses}
+                      {...register("link หนังสือตอบรับข้อเสนอ")}
+                    />
+                    <IconButton
+                      onClick={() => {
+                        window.open(
+                          watch(`link หนังสือตอบรับข้อเสนอ`),
+                          "_blank"
+                        );
+                      }}
+                      color="primary"
+                    >
+                      <FolderOpen className="w-5 h-5" />
+                    </IconButton>
+                  </div>
                 </div>
                 <div>
                   <label className={labelClasses}>Link ข้อเสนอโครงการ</label>
 
-                  <input
-                    type="text"
-                    className={inputClasses}
-                    {...register("link ข้อเสนอโครงการ")}
-                  />
+                  <div className="flex gap-2 ">
+                    <input
+                      type="text"
+                      className={inputClasses}
+                      {...register("link ข้อเสนอโครงการ")}
+                    />
+                    <IconButton
+                      onClick={() => {
+                        window.open(watch(`link ข้อเสนอโครงการ`), "_blank");
+                      }}
+                      color="primary"
+                    >
+                      <FolderOpen className="w-5 h-5" />
+                    </IconButton>
+                  </div>
                 </div>
               </div>
             </div>
