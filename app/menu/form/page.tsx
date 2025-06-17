@@ -742,7 +742,27 @@ export default function SolarCellForm() {
                         />
 
                         <div className="pb-1 flex gap-2 items-end">
-                          {index !== 0 ? (
+                          <Button
+                            onClick={() => {
+                              if (statusFieldArr.fields.length === 1) {
+                                statusFieldArr.update(index, {
+                                  status: "",
+                                  date: "",
+                                });
+                                setValue(`statusArrObject.${index}.status`, "");
+                                setValue(`statusArrObject.${index}.date`, "");
+                              } else {
+                                statusFieldArr.remove(index);
+                              }
+                            }}
+                            color="error"
+                            className="h-fit  "
+                            variant="contained"
+                          >
+                            {" "}
+                            <X className="" />{" "}
+                          </Button>
+                          {/* {index !== 0 ? (
                             <Button
                               onClick={() => statusFieldArr.remove(index)}
                               color="error"
@@ -754,7 +774,7 @@ export default function SolarCellForm() {
                             </Button>
                           ) : (
                             <div className="w-16"></div>
-                          )}
+                          )} */}
                           <Button
                             onClick={() =>
                               statusFieldArr.append({
@@ -804,7 +824,31 @@ export default function SolarCellForm() {
                           {...register(`activityArrObject.${index}.date`)}
                         />
                         <div className="pb-1 flex gap-2 items-end">
-                          {index !== 0 ? (
+                          <Button
+                            onClick={() => {
+                              if (activityFieldArr.fields.length === 1) {
+                                activityFieldArr.update(index, {
+                                  activity: "",
+                                  date: "",
+                                });
+                                setValue(
+                                  `activityArrObject.${index}.activity`,
+                                  ""
+                                );
+                                setValue(`activityArrObject.${index}.date`, "");
+                              } else {
+                                activityFieldArr.remove(index);
+                              }
+                            }}
+                            color="error"
+                            className="h-fit  "
+                            variant="contained"
+                          >
+                            {" "}
+                            <X className="" />{" "}
+                          </Button>
+
+                          {/* {index !== 0 ? (
                             <Button
                               onClick={() => activityFieldArr.remove(index)}
                               color="error"
@@ -816,7 +860,7 @@ export default function SolarCellForm() {
                             </Button>
                           ) : (
                             <div className="w-16"></div>
-                          )}
+                          )} */}
                           <Button
                             onClick={() =>
                               activityFieldArr.append({
