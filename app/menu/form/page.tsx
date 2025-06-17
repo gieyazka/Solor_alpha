@@ -47,7 +47,7 @@ import {
 import _ from "lodash";
 import { columnToLetter } from "@/utils/excel";
 import { updateMasterData } from "@/actions/excel";
-import { formatNumber, parseNumber } from "@/utils/fn";
+import { formatNumber, parseNumber, toThaiNumber } from "@/utils/fn";
 export default function SolarCellForm() {
   const masterStore = useSchoolStore();
 
@@ -105,7 +105,7 @@ export default function SolarCellForm() {
     // console.log("endColLetter", endColLetter);
     // console.log("startColumn", startColLetter);
     // console.log("rowData", rowData);
-
+    // return ;
     try {
       const res = await updateMasterData({
         data: rowData as string[],
@@ -1175,11 +1175,30 @@ export default function SolarCellForm() {
               </div>
               <div>
                 <label className={labelClasses}>เลขที่ ศธ.</label>
-                <input
+                {/* <input
                   type="text"
                   className={inputClasses}
                   placeholder="เลขที่เอกสาร ศธ."
                   {...register("เลขที่ ศธ.")}
+                /> */}
+                <Controller
+                  name="เลขที่ ศธ."
+                  control={control}
+                  render={({ field }) => (
+                    <input
+                      type="text"
+                      // inputMode="numeric"
+                      className={inputClasses}
+                      placeholder="เลขที่ ศธ."
+                      value={field.value || ""}
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(/,/g, "");
+
+                        const withComma = toThaiNumber(raw);
+                        field.onChange(withComma);
+                      }}
+                    />
+                  )}
                 />
               </div>
               <div>
@@ -1197,11 +1216,30 @@ export default function SolarCellForm() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2 sm:gap-4">
               <div>
                 <label className={labelClasses}>เลขที่ มท</label>
-                <input
+                {/* <input
                   type="text"
                   className={inputClasses}
                   placeholder="เลขที่ มท"
                   {...register("เลขที่ใบปะหน้า")}
+                /> */}
+                <Controller
+                  name="เลขที่ใบปะหน้า"
+                  control={control}
+                  render={({ field }) => (
+                    <input
+                      type="text"
+                      // inputMode="numeric"
+                      className={inputClasses}
+                      placeholder="เลขที่ มท"
+                      value={field.value || ""}
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(/,/g, "");
+
+                        const withComma = toThaiNumber(raw);
+                        field.onChange(withComma);
+                      }}
+                    />
+                  )}
                 />
               </div>
 
@@ -1223,7 +1261,7 @@ export default function SolarCellForm() {
                 <input
                   type="text"
                   className={inputClasses}
-                  placeholder="เลขที่เอกสาร ศธ."
+                  placeholder="เลขที่เอกสาร"
                   {...register("เลขที่หนังสือ")}
                 />
               </div>
@@ -1237,11 +1275,31 @@ export default function SolarCellForm() {
               </div>
               <div>
                 <label className={labelClasses}>เลขที่ ศธ.</label>
-                <input
+                {/* <input
                   type="text"
                   className={inputClasses}
                   placeholder="เลขที่เอกสาร ศธ."
                   {...register("เลขที่ ศธ ข้อเสนอ")}
+                /> */}
+
+                <Controller
+                  name="เลขที่ ศธ ข้อเสนอ"
+                  control={control}
+                  render={({ field }) => (
+                    <input
+                      type="text"
+                      // inputMode="numeric"
+                      className={inputClasses}
+                      placeholder="เลขที่ ศธ."
+                      value={field.value || ""}
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(/,/g, "");
+
+                        const withComma = toThaiNumber(raw);
+                        field.onChange(withComma);
+                      }}
+                    />
+                  )}
                 />
               </div>
               <div>
