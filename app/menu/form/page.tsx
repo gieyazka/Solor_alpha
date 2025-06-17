@@ -48,12 +48,8 @@ import { updateMasterData } from "@/actions/excel";
 import { formatNumber, parseNumber } from "@/utils/fn";
 export default function SolarCellForm() {
   const masterStore = useSchoolStore();
-  // console.log(
-  //   "masterStore.",
-  //   Object.keys(_.groupBy(masterStore.masterData, "ชื่อโรงเรียน")).length
-  // );
-  const [formData, setFormData] = useState<Partial<SchoolData>>({});
 
+  // console.log("masterStore.", masterStore.masterData[0]);
   const {
     register,
     handleSubmit,
@@ -69,16 +65,11 @@ export default function SolarCellForm() {
       meterArrObject: [{ ca: "", kw_pk: "", rate: "" }],
     },
   });
-  const handleInputChange = (e: React.ChangeEvent<any>) => {
-    const { name, value } = e.target;
-    console.log(name, value);
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-  const onSubmit: SubmitHandler<Partial<SchoolData>> = async (data) => {
-    console.log("data", data);
+
+  const onSubmit: SubmitHandler<Partial<SchoolData>> = async (d) => {
+    const data = JSON.parse(JSON.stringify(d, null, 2));
+    // console.log(71, data);
+    // console.log('first', Object.keys(data))
     const formulaColumns = ["id"]; // หรือ 'A' ถ้าคุณ map เป็น column letter
     const filteredHeaders = masterStore.headers.filter(
       (h) => !formulaColumns.includes(h)
@@ -108,10 +99,10 @@ export default function SolarCellForm() {
       }
       return data[key as keyof SchoolData] ?? "";
     });
-    console.log("rowUpdate", rowUpdate);
-    console.log("endColLetter", endColLetter);
-    console.log("startColumn", startColLetter);
-    console.log("rowData", rowData);
+    // console.log("rowUpdate", rowUpdate);
+    // console.log("endColLetter", endColLetter);
+    // console.log("startColumn", startColLetter);
+    // console.log("rowData", rowData);
 
     const res = await updateMasterData({
       data: rowData as string[],
@@ -256,7 +247,7 @@ export default function SolarCellForm() {
       reset();
     }
   };
-
+  // console.log("watch()", watch());
   const meterValues = watch("meterArrObject");
   useEffect(() => {
     const sum = _.sumBy(meterValues, (item) => parseFloat(item.kw_pk));
@@ -294,6 +285,7 @@ export default function SolarCellForm() {
     "block text-sm sm:text-base font-medium text-gray-700 mb-1 sm:mb-2";
   const sectionClasses =
     "bg-white rounded-xl shadow-lg p-4 sm:p-6 lg:p-8 border border-gray-100";
+
   return (
     <div className="pt-2 min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 pb-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -454,7 +446,7 @@ export default function SolarCellForm() {
                     type="text"
                     className={inputClasses}
                     placeholder="กฟภ."
-                    {...register("กฟภ.")}
+                    {...register("กฟภ")}
                   />
                 </div>
                 <div>

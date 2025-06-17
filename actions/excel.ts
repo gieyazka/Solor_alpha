@@ -49,9 +49,10 @@ export async function loadMasterData() {
     if (!rows || rows.length < 2) return [];
 
     const [headers, ...dataRows] = rows;
-    const result = dataRows.map((row) => {
+    const result = dataRows.map((row, index) => {
       const rowData: Record<string, any> = {};
       headers.forEach((header, i) => {
+     
         rowData[header] = row[i] ?? "";
       });
       return rowData;

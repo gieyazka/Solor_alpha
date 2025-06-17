@@ -14,7 +14,7 @@ export type SchoolData = {
   ภาค: string;
   สังกัด: string;
   เขต: string;
-  "กฟภ.": string;
+  กฟภ: string;
   อัตรา: string;
   CA: string;
   Status: string;
