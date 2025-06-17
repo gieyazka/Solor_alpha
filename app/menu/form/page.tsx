@@ -55,7 +55,7 @@ export default function SolarCellForm() {
     handleSubmit,
     reset,
     watch,
-    formState: { errors },
+    formState: { errors, isSubmitting },
     setValue,
     control,
   } = useForm<Partial<SchoolData>>({
@@ -286,7 +286,6 @@ export default function SolarCellForm() {
   const sectionClasses =
     "bg-white rounded-xl shadow-lg p-4 sm:p-6 lg:p-8 border border-gray-100";
 
-    
   return (
     <div className="pt-2 min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 pb-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -1312,11 +1311,18 @@ export default function SolarCellForm() {
           {/* ปุ่มบันทึก */}
           <div className="flex justify-center pt-6 sm:pt-8">
             <button
+              disabled={isSubmitting}
               type="submit"
               className="flex items-center px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-blue-600 to-green-600 text-white text-base sm:text-lg font-semibold rounded-xl shadow-lg hover:from-blue-700 hover:to-green-700 transform hover:scale-105 transition-all duration-200 w-full sm:w-auto"
             >
-              <Save className="h-5 w-5 sm:h-6 sm:w-6 mr-2 sm:mr-3" />
-              บันทึกข้อมูล
+              {isSubmitting ? (
+                "กำลังส่ง..."
+              ) : (
+                <>
+                  <Save className="h-5 w-5 sm:h-6 sm:w-6 mr-2 sm:mr-3" />
+                  บันทึกข้อมูล
+                </>
+              )}
             </button>
           </div>
         </form>

@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import ClientLayoutWrapper from "./ClientLayoutWrapper";
 import { getMaster } from "@/actions/school";
-
+export const dynamic = "force-dynamic";
 export default async function RootLayout({
   children,
 }: Readonly<{
