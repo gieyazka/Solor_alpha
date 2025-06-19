@@ -1,7 +1,7 @@
 {
   "name": "ESCO MODEL",
   "short_name": "ESCO",
-  "start_url": "/event",
+  "start_url": "/menu/dashboard",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#008000",
