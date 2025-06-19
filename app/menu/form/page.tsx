@@ -17,6 +17,7 @@ import {
   X,
   Download,
   FolderOpen,
+  ArrowBigUp,
 } from "lucide-react";
 import AsynSchoolAutoComplete from "@/components/event/school-autocomplete";
 import { useSchoolStore } from "@/stores";
@@ -50,7 +51,27 @@ import { updateMasterData } from "@/actions/excel";
 import { formatNumber, parseNumber, toThaiNumber } from "@/utils/fn";
 export default function SolarCellForm() {
   const masterStore = useSchoolStore();
+  const [hidden, setHidden] = useState(true);
 
+  useEffect(() => {
+    const target = document.getElementById("topForm");
+    console.log("target", target);
+    if (!target) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setHidden(entry.isIntersecting);
+      },
+      {
+        root: null, // viewport
+        threshold: 0.3, // กี่ % ของ section ที่เข้า viewport ถึงจะถือว่า "intersecting"
+      }
+    );
+
+    observer.observe(target);
+
+    return () => observer.disconnect();
+  }, []);
   // console.log("masterStore.", masterStore.masterData[0]);
   const {
     register,
@@ -69,9 +90,15 @@ export default function SolarCellForm() {
   });
 
   const onSubmit: SubmitHandler<Partial<SchoolData>> = async (d) => {
-    const data = JSON.parse(JSON.stringify(d, null, 2));
+    let data = JSON.parse(JSON.stringify(d, null, 2)) as Partial<SchoolData>;
+    const [lat, lng] = data.location?.split(",") ?? [];
+    data.Latitude = lat || "";
+    data.Longitude = lng || "";
     // console.log(71, data);
     // console.log('first', Object.keys(data))
+
+    
+
     const formulaColumns = ["id"]; // หรือ 'A' ถ้าคุณ map เป็น column letter
     const filteredHeaders = masterStore.headers.filter(
       (h) => !formulaColumns.includes(h)
@@ -105,7 +132,7 @@ export default function SolarCellForm() {
     // console.log("endColLetter", endColLetter);
     // console.log("startColumn", startColLetter);
     // console.log("rowData", rowData);
-    // return ;
+
     try {
       const res = await updateMasterData({
         data: rowData as string[],
@@ -123,6 +150,7 @@ export default function SolarCellForm() {
       // reset();
     } catch (error) {
       alert("เขียนข้อมูลไม่สำเร็จ");
+      window.location.reload()
     }
   };
 
@@ -249,6 +277,10 @@ export default function SolarCellForm() {
           setValue(`activityArrObject.${i}.date`, d.date);
         });
       }
+      setValue(
+        "location",
+        `${findSchoolByKey[0].Latitude},${findSchoolByKey[0].Longitude}`
+      );
     } else {
       reset();
     }
@@ -293,9 +325,9 @@ export default function SolarCellForm() {
     "bg-white rounded-xl shadow-lg p-4 sm:p-6 lg:p-8 border border-gray-100";
 
   return (
-    <div className="pt-2 min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 pb-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-8">
+    <div className="relative pt-2 min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 pb-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8  ">
+        <div id={`topForm`} className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
             <Zap className="h-12 w-12 text-yellow-500 mr-3" />
             <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">
@@ -706,7 +738,7 @@ export default function SolarCellForm() {
           </div> */}
 
           {/* สถานะและกิจกรรม */}
-          <div className={sectionClasses}>
+          <div className={`!bg-purple-200 ${clsx(sectionClasses)}`}>
             <div className="flex items-center mb-4 sm:mb-6">
               <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600 mr-2 sm:mr-3" />
               <h2 className="text-xl sm:text-2xl font-bold text-gray-800">
@@ -889,7 +921,7 @@ export default function SolarCellForm() {
             </div>
           </div>
 
-          <div className={sectionClasses}>
+          <div className={`!bg-pink-100 ${clsx(sectionClasses)}`}>
             <div className="flex items-center mb-4 sm:mb-6">
               <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600 mr-2 sm:mr-3" />
               <h2 className="text-xl sm:text-2xl font-bold text-gray-800">
@@ -1398,8 +1430,8 @@ export default function SolarCellForm() {
                 พิกัดและข้อมูลเพิ่มเติม
               </h2>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 sm:gap-6">
-              <div>
+            <div className="grid grid-cols-1 sm:grid-cols-1 lg:grid-cols-1 gap-4 sm:gap-6">
+              {/* <div>
                 <label className={labelClasses}>Latitude</label>
                 <input
                   type="text"
@@ -1416,7 +1448,20 @@ export default function SolarCellForm() {
                   placeholder="ลองจิจูด"
                   {...register("Longitude")}
                 />
+              </div> */}
+
+              <div>
+                <label className={labelClasses}>
+                  ตำแหน่ง Latitude,Longitude
+                </label>
+                <input
+                  type="text"
+                  className={inputClasses}
+                  placeholder="ตำแหน่ง"
+                  {...register("location")}
+                />
               </div>
+
               {/* <div>
                 <label className={labelClasses}>Check Status</label>
                 <select
@@ -1447,7 +1492,20 @@ export default function SolarCellForm() {
               </div> */}
             </div>
           </div>
-
+          {!hidden && (
+            <button
+              type="button"
+              className="fixed  bottom-4 right-4 z-50 bg-blue-600 hover:bg-blue-700 text-white px-4 py-4 rounded-full shadow-lg transition-all"
+              onClick={() => {
+                const section = document.getElementById("topForm");
+                if (section) {
+                  section.scrollIntoView({ behavior: "smooth" });
+                }
+              }}
+            >
+              <ArrowBigUp />
+            </button>
+          )}
           {/* ปุ่มบันทึก */}
           <div className="flex justify-center pt-6 sm:pt-8">
             <button

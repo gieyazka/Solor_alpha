@@ -63,8 +63,8 @@ export type SchoolData = {
   Focus: string;
   อาจารย์โจ้: string;
   check: string;
-  Latitude: number;
-  Longitude: number;
+  Latitude: string;
+  Longitude: string;
   chk: string;
   statusArr: string;
   activityArr: string;
@@ -81,7 +81,7 @@ export type SchoolData = {
   "link ข้อเสนอโครงการ": string;
   "link หนังสือเชิญ": string;
   "link หนังสือตอบรับข้อเสนอ": string;
-
+  location: string;
   meterArrObject: { rate: string; ca: string; kw_pk: string }[];
   statusArrObject: { status: string; date?: string }[];
   activityArrObject: { activity: string; date?: string }[];

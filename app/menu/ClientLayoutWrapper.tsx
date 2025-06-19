@@ -18,10 +18,15 @@ import {
   X,
   FormInputIcon,
 } from "lucide-react";
+import { LocalizationProvider } from "@mui/x-date-pickers";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import dayjs from "dayjs";
+import "dayjs/locale/th";
 import { useSchoolStore } from "@/stores/index";
 import { SchoolData } from "@/@type";
 import { usePathname, useRouter } from "next/navigation";
 import _ from "lodash";
+dayjs.locale("th");
 export default function ClientLayoutWrapper({
   initialData,
   children,
@@ -62,123 +67,125 @@ export default function ClientLayoutWrapper({
     }
   }, [initialData]);
   return (
-    <div className="min-h-screen   ">
-      {/* Top Navigation Bar */}
-      <nav className="fixed top-0 left-0 right-0 h-16 bg-white z-50 shadow-sm border-b border-gray-200 px-4 md:px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2 md:space-x-4">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="text-gray-500 hover:text-gray-700 p-1"
-            >
-              <Menu size={24} />
-            </button>
-            <h1 className="text-lg md:text-xl font-semibold text-gray-800">
-              {_.upperFirst(_.last(pathname.split("/")))}
-            </h1>
-          </div>
-
-          <div className="flex items-center space-x-2 md:space-x-4">
-            {/* Search - Hidden on mobile, shown on larger screens */}
-            <div className="relative hidden md:block">
-              <Search
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                size={20}
-              />
-              <input
-                type="text"
-                placeholder="Search..."
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-48 lg:w-64"
-              />
-            </div>
-            {/* Mobile search icon */}
-            <button className="text-gray-500 hover:text-gray-700 md:hidden">
-              <Search size={20} />
-            </button>
-            <button className="text-gray-500 hover:text-gray-700 relative">
-              <Bell size={20} />
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 md:h-5 md:w-5 flex items-center justify-center text-xs">
-                3
-              </span>
-            </button>
-            <button className="text-gray-500 hover:text-gray-700">
-              <User size={20} />
-            </button>
-          </div>
-        </div>
-      </nav>
-
-      <div className="flex  h-screen overflow-hidden">
-        {/* Mobile Overlay */}
-        {isMobile && sidebarOpen && (
-          <div
-            className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
-
-        {/* Sidebar */}
-        <aside
-          className={`fixed left-0 top-16 z-50 h-screen  bg-white shadow-sm border-r border-gray-200 transition-all duration-300 ${
-            isMobile
-              ? `fixed left-0 top-0 h-full z-50 ${
-                  sidebarOpen ? "w-64" : "w-0 overflow-hidden"
-                }`
-              : `${sidebarOpen ? "w-64" : "w-16"}`
-          }`}
-        >
-          {/* Mobile close button */}
-          {isMobile && (
-            <div className="flex justify-end p-4 border-b border-gray-200">
+    <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="th">
+      <div className="min-h-screen   ">
+        {/* Top Navigation Bar */}
+        <nav className="fixed top-0 left-0 right-0 h-16 bg-white z-50 shadow-sm border-b border-gray-200 px-4 md:px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2 md:space-x-4">
               <button
-                onClick={() => setSidebarOpen(false)}
-                className="text-gray-500 hover:text-gray-700"
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="text-gray-500 hover:text-gray-700 p-1"
               >
-                <X size={24} />
+                <Menu size={24} />
+              </button>
+              <h1 className="text-lg md:text-xl font-semibold text-gray-800">
+                {_.upperFirst(_.last(pathname.split("/")))}
+              </h1>
+            </div>
+
+            <div className="flex items-center space-x-2 md:space-x-4">
+              {/* Search - Hidden on mobile, shown on larger screens */}
+              <div className="relative hidden md:block">
+                <Search
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                  size={20}
+                />
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-48 lg:w-64"
+                />
+              </div>
+              {/* Mobile search icon */}
+              <button className="text-gray-500 hover:text-gray-700 md:hidden">
+                <Search size={20} />
+              </button>
+              <button className="text-gray-500 hover:text-gray-700 relative">
+                <Bell size={20} />
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 md:h-5 md:w-5 flex items-center justify-center text-xs">
+                  3
+                </span>
+              </button>
+              <button className="text-gray-500 hover:text-gray-700">
+                <User size={20} />
               </button>
             </div>
+          </div>
+        </nav>
+
+        <div className="flex  h-screen overflow-hidden">
+          {/* Mobile Overlay */}
+          {isMobile && sidebarOpen && (
+            <div
+              className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+              onClick={() => setSidebarOpen(false)}
+            />
           )}
 
-          <div className="p-4 h-screen ">
-            <div className="space-y-2">
-              {[
-                { id: "dashboard", icon: Home, label: "Dashboard" },
-                { id: "form", icon: FormInputIcon, label: "Form" },
-
-                { id: "event", icon: Calendar, label: "Calendar" },
-              ].map((item) => (
+          {/* Sidebar */}
+          <aside
+            className={`fixed left-0 top-16 z-50 h-screen  bg-white shadow-sm border-r border-gray-200 transition-all duration-300 ${
+              isMobile
+                ? `fixed left-0 top-0 h-full z-50 ${
+                    sidebarOpen ? "w-64" : "w-0 overflow-hidden"
+                  }`
+                : `${sidebarOpen ? "w-64" : "w-16"}`
+            }`}
+          >
+            {/* Mobile close button */}
+            {isMobile && (
+              <div className="flex justify-end p-4 border-b border-gray-200">
                 <button
-                  key={item.id}
-                  onClick={() => {
-                    setActiveTab(item.id);
-                    if (isMobile) setSidebarOpen(false);
-                  }}
-                  className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${
-                    activeTab === item.id
-                      ? "bg-blue-50 text-blue-600 border-l-4 border-blue-600"
-                      : "text-gray-600 hover:bg-gray-50"
-                  }`}
+                  onClick={() => setSidebarOpen(false)}
+                  className="text-gray-500 hover:text-gray-700"
                 >
-                  <item.icon size={20} />
-                  {(sidebarOpen || isMobile) && (
-                    <span className="font-medium">{item.label}</span>
-                  )}
+                  <X size={24} />
                 </button>
-              ))}
+              </div>
+            )}
+
+            <div className="p-4 h-screen ">
+              <div className="space-y-2">
+                {[
+                  { id: "dashboard", icon: Home, label: "Dashboard" },
+                  { id: "form", icon: FormInputIcon, label: "Form" },
+
+                  { id: "event", icon: Calendar, label: "Calendar" },
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      setActiveTab(item.id);
+                      if (isMobile) setSidebarOpen(false);
+                    }}
+                    className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${
+                      activeTab === item.id
+                        ? "bg-blue-50 text-blue-600 border-l-4 border-blue-600"
+                        : "text-gray-600 hover:bg-gray-50"
+                    }`}
+                  >
+                    <item.icon size={20} />
+                    {(sidebarOpen || isMobile) && (
+                      <span className="font-medium">{item.label}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </aside>
+          <div
+            className={`flex-1 ml-0 transition-all duration-300 ${
+              isMobile ? "" : `${sidebarOpen ? "ml-64" : "ml-16"}`
+            } overflow-y-auto h-screen`}
+          >
+            <div className="min-h-screen overflow-y-hidden  bg-white">
+              <div className="mt-16 ">{children}</div>
             </div>
           </div>
-        </aside>
-        <div
-          className={`flex-1 ml-0 transition-all duration-300 ${
-            isMobile ? "" : `${sidebarOpen ? "ml-64" : "ml-16"}`
-          } overflow-y-auto h-screen`}
-        >
-          <div className="min-h-screen overflow-y-hidden  bg-white">
-            <div className="mt-16 ">{children}</div>
-          </div>
+          {/* Main Content */}
         </div>
-        {/* Main Content */}
       </div>
-    </div>
+    </LocalizationProvider>
   );
 }
