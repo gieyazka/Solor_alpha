@@ -18,6 +18,8 @@ import {
   Download,
   FolderOpen,
   ArrowBigUp,
+  Watch,
+  Map,
 } from "lucide-react";
 import AsynSchoolAutoComplete from "@/components/event/school-autocomplete";
 import { useSchoolStore } from "@/stores";
@@ -89,6 +91,14 @@ export default function SolarCellForm() {
     },
   });
 
+  const openMap = (schoolName: string, lat: string, lng: string) => {
+    // const encodedLabel = encodeURIComponent(schoolName);
+    const url = `https://www.google.com/maps/search/?api=1&query=${schoolName}%20@${lat},${lng}`;
+    // const url = `https://www.google.com/maps/place/${encodedLabel}/@${lat},${lng},${17}z/data=!3m1!4b1?q=${lat},${lng}`;
+    console.log("url", url);
+    window.open(url, "_blank");
+  };
+
   const onSubmit: SubmitHandler<Partial<SchoolData>> = async (d) => {
     let data = JSON.parse(JSON.stringify(d, null, 2)) as Partial<SchoolData>;
     const [lat, lng] = data.location?.split(",") ?? [];
@@ -96,8 +106,6 @@ export default function SolarCellForm() {
     data.Longitude = lng || "";
     // console.log(71, data);
     // console.log('first', Object.keys(data))
-
-    
 
     const formulaColumns = ["id"]; // หรือ 'A' ถ้าคุณ map เป็น column letter
     const filteredHeaders = masterStore.headers.filter(
@@ -150,7 +158,7 @@ export default function SolarCellForm() {
       // reset();
     } catch (error) {
       alert("เขียนข้อมูลไม่สำเร็จ");
-      window.location.reload()
+      window.location.reload();
     }
   };
 
@@ -1450,18 +1458,32 @@ export default function SolarCellForm() {
                 />
               </div> */}
 
-              <div>
-                <label className={labelClasses}>
-                  ตำแหน่ง Latitude,Longitude
-                </label>
-                <input
-                  type="text"
-                  className={inputClasses}
-                  placeholder="ตำแหน่ง"
-                  {...register("location")}
-                />
+              <div className="flex gap-2 items-end">
+                <div className="flex-1">
+                  <label className={labelClasses}>
+                    ตำแหน่ง Latitude,Longitude
+                  </label>
+                  <input
+                    type="text"
+                    className={inputClasses}
+                    placeholder="ตำแหน่ง"
+                    {...register("location")}
+                  />
+                </div>
+                <button
+                  type="button"
+                  className=" bg-blue-600 hover:bg-blue-700 text-white px-4 py-4 rounded-full shadow-lg transition-all"
+                  onClick={() => {
+                    openMap(
+                      String(watch("ชื่อโรงเรียน")),
+                      String(watch("Latitude")),
+                      String(watch("Longitude"))
+                    );
+                  }}
+                >
+                  <Map />
+                </button>
               </div>
-
               {/* <div>
                 <label className={labelClasses}>Check Status</label>
                 <select
