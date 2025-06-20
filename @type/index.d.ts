@@ -54,7 +54,7 @@ export type SchoolData = {
   เบอร์โทรองค์กรสังกัดสถานศึกษา: string;
   เลขที่: string;
   วันที่: string;
-  "เลขที่ ศธ.": string;
+  "เลขที่ ศธ": string;
   วันที่ตอบกลับ: string;
   Simulation: string;
   ข้อเสนอโครงการ: string;

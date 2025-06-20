@@ -1222,7 +1222,7 @@ export default function SolarCellForm() {
                   {...register("เลขที่ ศธ.")}
                 /> */}
                 <Controller
-                  name="เลขที่ ศธ."
+                  name="เลขที่ ศธ"
                   control={control}
                   render={({ field }) => (
                     <input
