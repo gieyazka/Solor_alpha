@@ -348,8 +348,8 @@ function Dashboard() {
                           {[
                             "นำเสนอโครงการ",
                             "ตอบรับเข้าร่วมโครงการ",
-                            "ชี้แจงข้อมูลโครงการและสำรวจพื่นที่",
-                            "ประเมินโครงการพรอมจัดทำข้อเสนอ",
+                            "ชี้แจงข้อมูลโครงการและสำรวจพื้นที่",
+                            "ประเมิณโครงการพร้อมจัดทำข้อเสนอ",
                             "PEA Approveข้อเสนอ",
                             "นำเสนอข้อเสนอโครงการ",
                             "ลงนามสัญญาให้บริการ",
@@ -357,7 +357,7 @@ function Dashboard() {
                           ]?.map((statusData: string, i) => {
                             const stepIndex = i + 1;
                             const checkHaveGroup = groupData[statusData];
-
+                        
                             return (
                               <Tooltip
                                 key={`${item.id}_${stepIndex}`}
