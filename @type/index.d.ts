@@ -1,3 +1,5 @@
+export type Condition = ">" | ">=" | "<" | "<=" | "==" | "!=";
+
 export type SchoolData = {
   id: number;
   ลำดับ: number;

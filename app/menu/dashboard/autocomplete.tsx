@@ -147,12 +147,14 @@ export const CustomSingleAutoComplete = (props: {
         options={optionScool ?? Object.keys(dataKey).splice(0, 200)}
         // loading={schoolQuery.isFetching}
         limitTags={1}
-        renderOption={(props, option, { selected }) => (
-          <li {...props}>
-            {selected && <span className="text-green-500 mr-2">✔</span>}
-            {option}
-          </li>
-        )}
+        renderOption={(props, option, { selected }) => {
+          return (
+            <li {...props} key={option}>
+              {selected && <span className="text-green-500 mr-2">✔</span>}
+              {option}
+            </li>
+          );
+        }}
         renderInput={(params) => (
           <TextField
             {...params}

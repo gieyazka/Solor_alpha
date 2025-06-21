@@ -1,3 +1,5 @@
+import { Condition } from "@/@type";
+
 export const formatNumber = (val: string) => {
   let input = val.replace(/,/g, "");
 
@@ -26,3 +28,12 @@ export function toThaiNumber(input: string) {
 }
 
 export const parseNumber = (val: string) => val.replace(/,/g, "");
+
+export const ops: Record<Condition, (a: number, b: number) => boolean> = {
+  ">": (a, b) => a > b,
+  ">=": (a, b) => a >= b,
+  "<": (a, b) => a < b,
+  "<=": (a, b) => a <= b,
+  "==": (a, b) => a === b,
+  "!=": (a, b) => a !== b,
+};

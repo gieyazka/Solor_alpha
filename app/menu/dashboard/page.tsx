@@ -2,12 +2,24 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { ChevronDown, Eye, FileText, Trash2, BarChart3 } from "lucide-react";
 import { useSchoolStore } from "@/stores";
-import { Autocomplete, Pagination, TextField, Tooltip } from "@mui/material";
-import { SchoolData } from "@/@type";
+import {
+  Autocomplete,
+  Box,
+  List,
+  ListItem,
+  ListItemText,
+  Pagination,
+  TextField,
+  Tooltip,
+  Typography,
+} from "@mui/material";
+import { Condition, SchoolData } from "@/@type";
 import clsx from "clsx";
 import _ from "lodash";
 import { CustomAutoComplete, CustomSingleAutoComplete } from "./autocomplete";
-import { statusOption } from "@/utils/options";
+import FilterPopover from "./filterPopover";
+import { ops } from "@/utils/fn";
+import { useFilteredSchoolData } from "@/utils/hook";
 
 type filterType = {
   province?: string[];
@@ -17,6 +29,19 @@ type filterType = {
   area?: string[];
 };
 
+const statusOption = [
+  "สนใจนำเสนอโครงการ",
+  "ตอบรับเข้าร่วมโครงการ",
+  "ชี้แจงโครงการ+สำรวจ",
+  "กฟภ. ส่งข้อเสนอโครงการ+ร่างสัญญา",
+  "นำเสนอข้อเสนอโครงการ",
+  "ตอบรับร่างสัญญาโครงการ",
+  "กฟภ. ทำสัญญาให้บริการ",
+  "ไม่สนใจ",
+  "ยกเลิก",
+];
+
+const collator = new Intl.Collator("th", { sensitivity: "base" });
 function Dashboard() {
   const [filters, setFilters] = useState({
     school: "",
@@ -28,7 +53,7 @@ function Dashboard() {
   const masterData = useSchoolStore();
   const [page, setPage] = useState(1);
   const perPage = 10;
-  const [schollData, setSchoolData] = useState(masterData.masterDataKey);
+  // const [schoolData, setSchoolData] = useState(masterData.masterDataKey);
 
   const [selectedRegion, setSelectedRegion] = useState<string[]>([]);
   const [selectedDepartment, setSelectedDepartment] = useState<string[]>([]);
@@ -38,66 +63,138 @@ function Dashboard() {
   const [selectedStatus, setSelectedStatus] = useState<string | undefined>(
     undefined
   );
-  useEffect(() => {
-    setPage(1);
+  const [eletricFilter, setElectricFilter] = useState<{
+    condition: string;
+    value: string;
+  }>({
+    condition: "",
+    value: "",
+  });
 
-    const filteredData = masterData.masterData.filter((s) => {
-      const regionMatch =
-        selectedRegion.length === 0 || selectedRegion.includes(s["ภาค"]);
-      const departmentMatch =
-        selectedDepartment.length === 0 ||
-        selectedDepartment.includes(s["สังกัด"]);
-      const provinceMatch =
-        selectedProvince.length === 0 ||
-        selectedProvince.includes(s["ชื่อจังหวัด"]);
-      const areaMatch =
-        selectedArea.length === 0 || selectedArea.includes(s["กฟภ"]);
-      const schoolMatch =
-        selectedSchool.length === 0 ||
-        selectedSchool.includes(s["ชื่อโรงเรียน"]);
-
-      const statusMatch = (() => {
-        if (selectedStatus !== undefined && selectedStatus !== "") {
-          if (s.statusArr) {
-            try {
-              const status: { status: string; date: string }[] = JSON.parse(
-                s.statusArr
-              );
-              return status?.some((d) => {
-                return d.status === selectedStatus;
-              });
-              // return _.last(status)?.status === selectedStatus;
-            } catch (e) {
-              return false;
-            }
-          }
-          return false;
-        }
-        return true; // ถ้าไม่ได้กรอง status ให้ถือว่าผ่าน
-      })();
-
-      return (
-        regionMatch &&
-        departmentMatch &&
-        provinceMatch &&
-        areaMatch &&
-        schoolMatch &&
-        statusMatch
-      );
-    });
-    // console.log(
-    //   '_.groupBy(filteredData, "ชื่อโรงเรียน")',
-    //   _.groupBy(filteredData, "ชื่อโรงเรียน")
-    // );
-    setSchoolData(_.groupBy(filteredData, "ชื่อโรงเรียน"));
-  }, [
+  const { schoolData, totalKW } = useFilteredSchoolData({
+    masterDataKey: masterData.masterDataKey,
     selectedRegion,
-    selectedArea,
     selectedDepartment,
     selectedProvince,
+    selectedArea,
     selectedSchool,
-    selectedStatus,
-  ]);
+    selectedStatus: selectedStatus,
+    statusOption,
+    eletricFilter,
+  });
+
+  // reset page ทุกครั้งที่ filtered result เปลี่ยน
+  useEffect(() => {
+    setPage(1);
+  }, [schoolData]);
+
+  // useEffect(() => {
+  //   setPage(1);
+
+  //   function filterRow(row: SchoolData): boolean {
+  //     const regionMatch =
+  //       selectedRegion.length === 0 || selectedRegion.includes(row["ภาค"]);
+  //     const departmentMatch =
+  //       selectedDepartment.length === 0 ||
+  //       selectedDepartment.includes(row["สังกัด"]);
+  //     const provinceMatch =
+  //       selectedProvince.length === 0 ||
+  //       selectedProvince.includes(row["ชื่อจังหวัด"]);
+  //     const areaMatch =
+  //       selectedArea.length === 0 || selectedArea.includes(row["กฟภ"]);
+  //     const schoolMatch =
+  //       selectedSchool.length === 0 ||
+  //       selectedSchool.includes(row["ชื่อโรงเรียน"]);
+
+  //     const statusMatch = (() => {
+  //       if (!selectedStatus) return true;
+
+  //       try {
+  //         const arr: { status: string; date: string }[] = JSON.parse(
+  //           row.statusArr ?? "[]"
+  //         );
+
+  //         // ถ้า selectedStatus เป็นกลุ่ม prefix (ยกเลิก หรือ ไม่สนใจ)
+  //         if (statusOption.includes(selectedStatus as any)) {
+  //           return arr.some((d) => d.status.startsWith(selectedStatus));
+  //         }
+
+  //         // ปกติใช้เท่ากันเป๊ะ
+  //         return arr.some((d) => d.status === selectedStatus);
+  //       } catch {
+  //         return false;
+  //       }
+  //     })();
+  //     // เพิ่มเงื่อนไข eletricFilter ตามต้องการ...
+
+  //     return (
+  //       regionMatch &&
+  //       departmentMatch &&
+  //       provinceMatch &&
+  //       areaMatch &&
+  //       schoolMatch &&
+  //       statusMatch
+  //       // && kwMatch
+  //     );
+  //   }
+  //   let totalKW = 0;
+  //   const grouped = Object.entries(masterData.masterDataKey).reduce<
+  //     Record<string, SchoolData[]>
+  //   >((acc, [_, rows]) => {
+  //     // 1. เก็บแถวที่ผ่าน filter + สรุป sumKw
+  //     const passingRows: SchoolData[] = [];
+  //     let sumKw = 0;
+  //     if (rows[0].meterArr !== "") {
+  //       const meterData = JSON.parse(rows[0].meterArr);
+  //       meterData.forEach(
+  //         (element: { ca: string; kw_pk: string; rate: string }) => {
+  //           sumKw += parseFloat(element.kw_pk) || 0;
+  //         }
+  //       );
+  //     }
+  //     for (const row of rows) {
+  //       if (!filterRow(row)) continue;
+
+  //       passingRows.push(row);
+  //       if (row.meterArr === "") {
+  //         sumKw += parseFloat(String(row["KW_PK"])) || 0;
+  //       }
+  //     }
+
+  //     // 2. ถ้าไม่มีแถวผ่าน หรือ ไม่มีเงื่อนไข filter KW ก็จบเลย
+  //     if (passingRows.length === 0) return acc;
+  //     const { condition, value } = eletricFilter;
+  //     // 3. กรณี *ไม่มี* เงื่อนไข filter ค่า KW ให้เก็บทุกกลุ่ม
+  //     if (condition === "" && value === "") {
+  //       passingRows[0]["รวมKW_PK"] = String(sumKw);
+  //       acc[passingRows[0]["ชื่อโรงเรียน"]] = passingRows;
+  //       totalKW += parseFloat(passingRows[0]["รวมKW_PK"]) || 0;
+  //       return acc;
+  //     }
+
+  //     // 4. กรณีมีเงื่อนไข filter ค่า KW
+  //     const threshold = parseFloat(value);
+  //     const op = ops[condition as Condition];
+  //     if (op && op(sumKw, threshold)) {
+  //       passingRows[0]["รวมKW_PK"] = String(sumKw);
+  //       acc[passingRows[0]["ชื่อโรงเรียน"]] = passingRows;
+  //     }
+  //     totalKW += parseFloat(passingRows[0]["รวมKW_PK"]) || 0;
+
+  //     return acc;
+  //   }, {});
+  //   setSumKw(totalKW);
+  //   setSchoolData(grouped);
+  // }, [
+  //   masterData,
+  //   selectedRegion,
+  //   selectedArea,
+  //   selectedDepartment,
+  //   selectedProvince,
+  //   selectedSchool,
+  //   selectedStatus,
+  //   eletricFilter,
+  // ]);
   const handleRegionChange = (region: string[] | null | undefined) => {
     if (region) {
       setSelectedRegion(region);
@@ -196,10 +293,12 @@ function Dashboard() {
 
   // Sample data - replace with your actual data
 
-  const getStatusColor = (check: boolean) => {
+  const getStatusColor = (check: boolean, i: number) => {
     if (check) {
+      if (i == 8 || i == 9) return "bg-red-500";
       return "bg-green-500";
     }
+
     return "bg-gray-300";
   };
   // const getStatusColor = (step: number, currentStatus: any) => {
@@ -208,15 +307,15 @@ function Dashboard() {
   //   }
   //   return "bg-gray-300";
   // };
-  useEffect(() => {
-    setSchoolData(masterData.masterDataKey);
-  }, [masterData]);
+  // useEffect(() => {
+  //   setSchoolData(masterData.masterDataKey);
+  // }, [masterData]);
   // console.log("regionOptions", regionOptions);
   return (
     <div className="p-4 overflow-auto relative ">
       <div className="max-w-full mx-auto bg-white rounded-lg shadow-sm">
         {/* Header with Filters */}
-        <div className="p-6 border-b border-gray-200">
+        <div className=" border-b border-gray-200">
           <div className="flex flex-wrap gap-4 items-center justify-between">
             <div className="flex flex-wrap gap-2">
               <CustomAutoComplete
@@ -279,6 +378,14 @@ function Dashboard() {
                   (item) => item.split("12312321213")[0]
                 )}
               />
+              <FilterPopover
+                onSubmit={(condition: string, value: string) => {
+                  setElectricFilter({
+                    condition,
+                    value,
+                  });
+                }}
+              />
               {/* <CustomAutoComplete
                 label="เลือกการดำเนินการ"
                 handleChange={(props) => {
@@ -291,6 +398,9 @@ function Dashboard() {
               </button> */}
             </div>
           </div>
+          <p className="text-end p-2 font-bold text-2xl">
+            รวม {totalKW.toLocaleString()} KW
+          </p>
         </div>
 
         {/* Table */}
@@ -298,11 +408,12 @@ function Dashboard() {
           <table className="w-full">
             <thead>
               <tr className="bg-gradient-to-r from-purple-600 to-purple-500 text-white">
-                <th className="text-left py-4 px-6 font-medium">
+                <th className="text-center py-4 px-6 font-medium">
                   ชื่อโรงเรียน
                 </th>
-                <th className="text-left py-4 px-6 font-medium">จังหวัด</th>
-                <th className="text-left py-4 px-6 font-medium">สังกัด</th>
+                <th className="text-center py-4 px-6 font-medium">KW_PK</th>
+                <th className="text-center py-4 px-6 font-medium">จังหวัด</th>
+                <th className="text-center py-4 px-6 font-medium">สังกัด</th>
                 <th className="text-center py-4 px-6 font-medium">
                   สถานะปัจจุบัน
                 </th>
@@ -311,33 +422,112 @@ function Dashboard() {
               </tr>
             </thead>
             <tbody>
-              {Object.keys(schollData)
+              {Object.keys(schoolData)
+                .sort(collator.compare)
 
                 .splice((page - 1) * perPage, perPage)
                 .map((key, index) => {
-                  const item = schollData[key][0];
+                  const item = schoolData[key][0];
                   const status = item?.statusArr
                     ? JSON.parse(item?.statusArr)
                     : [];
                   const groupData = _.groupBy(status, "status");
-
+                  let meterArr =
+                    item.meterArr !== ""
+                      ? JSON.parse(item.meterArr)
+                      : schoolData[key]?.map((d) => {
+                          return {
+                            ca: d.CA,
+                            kw_pk: d.KW_PK,
+                            rate: d.อัตรา,
+                          };
+                        });
                   return (
                     <tr
+                      onClick={() => {
+                        console.log(schoolData[key]);
+                      }}
                       key={item.id}
                       className={`border-b border-gray-100 ${
                         index % 2 === 0 ? "bg-white" : "bg-gray-50"
                       } hover:bg-purple-50 transition-colors`}
                     >
-                      <td className="py-2 px-6 text-gray-800">
+                      <td className="py-2 px-6 text-gray-800 text-start">
                         {item["ชื่อโรงเรียน"]}
                       </td>
-                      <td className="py-2 px-6 text-gray-600">
+                      <td className="py-2 px-6 text-gray-800 text-center">
+                        <Tooltip
+                          key={`${item.id}`}
+                          enterTouchDelay={100}
+                          leaveTouchDelay={3000}
+                          slotProps={{
+                            tooltip: {
+                              sx: {
+                                bgcolor: "#fff", // พื้นหลังขาว
+                                color: "text.primary", // สีตัวอักษรเป็นสีหลัก (ดำ)
+                                boxShadow: 1, // เพิ่มเงาเล็กน้อย
+                                maxWidth: 240,
+                              },
+                            },
+                            arrow: {
+                              sx: {
+                                color: "#fff", // ลูกศรเป็นสีขาวเช่นกัน
+                              },
+                            },
+                          }}
+                          title={
+                            <Box sx={{ p: 1, maxWidth: 200 }}>
+                              <Typography variant="subtitle2" gutterBottom>
+                                รายละเอียด CA
+                              </Typography>
+                              <List dense disablePadding>
+                                {meterArr?.map(
+                                  (
+                                    d: {
+                                      ca: string;
+                                      kw_pk: string;
+                                      rate: string;
+                                    },
+                                    idx: number
+                                  ) => (
+                                    <ListItemText
+                                      primary={
+                                        <Typography
+                                          variant="body2"
+                                          fontWeight={500}
+                                          noWrap
+                                        >
+                                          {d.ca}
+                                        </Typography>
+                                      }
+                                      secondary={
+                                        <Typography variant="caption" noWrap>
+                                          KW_PK: {d.kw_pk} | อัตรา: {d.rate}
+                                        </Typography>
+                                      }
+                                    />
+                                  )
+                                )}
+                              </List>
+                            </Box>
+                          }
+                        >
+                          <div className="flex items-center">
+                            <div>
+                              {(
+                                parseFloat(item["รวมKW_PK"]) || 0
+                              )?.toLocaleString()}
+                            </div>
+                          </div>
+                        </Tooltip>
+                      </td>
+                      <td className="py-2 px-6 text-gray-600 text-center">
                         {item["ชื่อจังหวัด"]}
                       </td>
-                      <td className="py-2 px-6 text-gray-600">
+                      <td className="py-2 px-6 text-gray-600 text-center">
                         {item["สังกัด"]}
                       </td>
-                      <td className="py-2 px-6 text-gray-600">
+                      <td className="py-2 px-6 text-gray-600 text-center">
                         {
                           (_.last(status) as { status: string; date: string })
                             ?.status
@@ -345,19 +535,29 @@ function Dashboard() {
                       </td>
                       <td className="py-2 px-6">
                         <div className="flex items-center justify-center space-x-1">
-                          {[
-                            "นำเสนอโครงการ",
-                            "ตอบรับเข้าร่วมโครงการ",
-                            "ชี้แจงข้อมูลโครงการและสำรวจพื้นที่",
-                            "ประเมิณโครงการพร้อมจัดทำข้อเสนอ",
-                            "PEA Approveข้อเสนอ",
-                            "นำเสนอข้อเสนอโครงการ",
-                            "ลงนามสัญญาให้บริการ",
-                            "ยกเลิก",
-                          ]?.map((statusData: string, i) => {
+                          {statusOption.map((statusData: string, i) => {
                             const stepIndex = i + 1;
-                            const checkHaveGroup = groupData[statusData];
-                        
+
+                            let items: (typeof status)[] = [];
+
+                            if (statusData === "ยกเลิก") {
+                              // เอา entry ทั้งหมดที่ key ขึ้นต้นด้วย "ยกเลิก"
+                              items = _(groupData)
+                                .pickBy((_v, key) => key.startsWith("ยกเลิก"))
+                                .values()
+                                .flatten()
+                                .value();
+                            } else if (statusData === "ไม่สนใจ") {
+                              // ถ้าต้องการรวม "ไม่สนใจ ..." ด้วย
+                              items = _(groupData)
+                                .pickBy((_v, key) => key.startsWith("ไม่สนใจ"))
+                                .values()
+                                .flatten()
+                                .value();
+                            } else {
+                              // กรณีทั่วไป ใช้ตรงๆ
+                              items = groupData[statusData] ?? [];
+                            }
                             return (
                               <Tooltip
                                 key={`${item.id}_${stepIndex}`}
@@ -368,7 +568,8 @@ function Dashboard() {
                                 <div className="flex items-center">
                                   <div
                                     className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium ${getStatusColor(
-                                      checkHaveGroup !== undefined
+                                      items.length > 0,
+                                      stepIndex
                                     )}`}
                                   >
                                     {stepIndex}
@@ -462,17 +663,22 @@ function Dashboard() {
         </div> */}
 
         {/* Pagination */}
-        <div className="p-6 border-t border-gray-200 flex items-center justify-between">
-          <div className="text-sm text-gray-600">
+
+        <div className="p-6 border-t border-gray-200 grid grid-cols-9 items-center justify-between">
+          <div className="text-sm text-gray-600 col-span-2">
             แสดง {page * perPage - perPage + 1}-
-            {Math.min(page * perPage, Object.keys(schollData).length ?? 0)} จาก{" "}
-            {Object.keys(schollData).length ?? 0} รายการ
+            {Math.min(page * perPage, Object.keys(schoolData).length ?? 0)} จาก{" "}
+            {Object.keys(schoolData).length ?? 0} รายการ
           </div>
-          <div className="flex space-x-2">
+          <div className="col-span-2"></div>
+          <div></div>
+          <div></div>
+
+          <div className="flex justify-end space-x-2 col-span-3">
             <Pagination
               page={page}
               onChange={(e, v) => setPage(v)}
-              count={Math.ceil((Object.keys(schollData).length ?? 1) / perPage)}
+              count={Math.ceil((Object.keys(schoolData).length ?? 1) / perPage)}
               shape="rounded"
             />
           </div>

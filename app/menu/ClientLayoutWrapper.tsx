@@ -26,6 +26,7 @@ import { useSchoolStore } from "@/stores/index";
 import { SchoolData } from "@/@type";
 import { usePathname, useRouter } from "next/navigation";
 import _ from "lodash";
+import { Summarize } from "@mui/icons-material";
 dayjs.locale("th");
 export default function ClientLayoutWrapper({
   initialData,
@@ -149,6 +150,7 @@ export default function ClientLayoutWrapper({
               <div className="space-y-2">
                 {[
                   { id: "dashboard", icon: Home, label: "Dashboard" },
+                  { id: "summary", icon: Summarize, label: "Summary" },
                   { id: "form", icon: FormInputIcon, label: "Form" },
 
                   { id: "event", icon: Calendar, label: "Calendar" },
