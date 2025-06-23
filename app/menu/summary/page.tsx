@@ -158,52 +158,85 @@ const Dashboard: React.FC = () => {
 
   const summaryData = useMemo(() => {
     const provinces = new Set<string>();
+
+    // เตรียมโครงสร้างตัวนับก่อน
+    const rawCounts: Record<string, number> = {};
+    const activityCount: Record<string, number> = {};
+    const regionCounts: Record<string, number> = {};
+
+    // ลดเหลือรอบเดียว
     Object.values(schoolData).forEach((rows) => {
-      rows.forEach((row) => {
-        provinces.add(row["ชื่อจังหวัด"]);
-      });
-    });
+      if (rows.length === 0) {
+        // ยังไม่ดำเนินการ
+        rawCounts["ยังไม่ได้ดำเนินการ"] =
+          (rawCounts["ยังไม่ได้ดำเนินการ"] || 0) + 1;
+        activityCount["ยังไม่ได้ดำเนินการ"] =
+          (activityCount["ยังไม่ได้ดำเนินการ"] || 0) + 1;
+        return;
+      }
 
-    const lastStatuses = Object.values(schoolData).map((rows) => {
-      if (rows.length === 0) return "";
-      // statusArr คาดว่าซ้ำกันทุกรายการของโรงเรียนนี้
-      const arr: { status: string; date: string }[] = JSON.parse(
-        rows[0].statusArr !== "" ? rows[0].statusArr : "[]"
+      const first = rows[0];
+      // เก็บจังหวัด
+      provinces.add(first["ชื่อจังหวัด"]);
+      // เก็บภาค
+      const region = first["ภาค"];
+      regionCounts[region] = (regionCounts[region] || 0) + 1;
+
+      // หาสถานะสุดท้าย
+      const statusArr: { status: string; date: string }[] = JSON.parse(
+        first.statusArr || "[]"
       );
-      if (arr.length === 0) return "";
-      // sort ขึ้นต้นตามวันที่ แล้วหยิบตัวสุดท้าย
-      arr.sort(
-        (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+      let lastStatus = "";
+      if (statusArr.length) {
+        statusArr.sort((a, b) => +new Date(a.date) - +new Date(b.date));
+        lastStatus = statusArr[statusArr.length - 1].status;
+      }
+      // ปรับ prefix
+      if (lastStatus.startsWith("ยกเลิก")) lastStatus = "ยกเลิก";
+      else if (lastStatus.startsWith("ไม่สนใจ")) lastStatus = "ไม่สนใจ";
+      else if (!lastStatus) lastStatus = "ยังไม่ได้ดำเนินการ";
+      rawCounts[lastStatus] = (rawCounts[lastStatus] || 0) + 1;
+
+      // หากิจกรรมสุดท้าย
+      const actArr: { activity: string; date: string }[] = JSON.parse(
+        first.activityArr || "[]"
       );
-      return arr[arr.length - 1].status;
+      let lastAct = "";
+      if (actArr.length) {
+        actArr.sort((a, b) => +new Date(a.date) - +new Date(b.date));
+        lastAct = actArr[actArr.length - 1].activity;
+      }
+      // ปรับ prefix ถ้าต้องการ (ตัวอย่างนี้ใช้ startsWith เดียวกับ status ไม่ได้แปลง)
+      if (lastAct.startsWith("ส่งหนังสือเชิญ")) lastAct = "ส่งหนังสือเชิญ";
+      else if (!lastAct) lastAct = "ยังไม่ได้ดำเนินการ";
+      activityCount[lastAct] = (activityCount[lastAct] || 0) + 1;
     });
 
-    // 3️⃣ นับแต่ละสถานะสุดท้าย (จับ prefix ยกเลิก* / ไม่สนใจ*)
-    const rawCounts = _.countBy(lastStatuses, (s) => {
-      if (s.startsWith("ยกเลิก")) return "ยกเลิก";
-      if (s.startsWith("ไม่สนใจ")) return "ไม่สนใจ";
-      if (s === "") return "ยังไม่ได้ดำเนินการ";
-      return s;
-    });
-
-    // 4️⃣ เติม 0 ให้ครบทุกรายการใน MAIN_STATUSES
+    // เติม 0 ให้ครบทุก key ตาม options
     const statusCounts: Record<string, number> = {};
     ["ยังไม่ได้ดำเนินการ", ...statusOption].forEach((key) => {
-      statusCounts[key] = rawCounts[key] ?? 0;
+      statusCounts[key] = rawCounts[key] || 0;
     });
 
-    const regionCounts: Record<string, number> = {};
-    Object.values(schoolData).forEach((rows) => {
-      const region = rows[0]["ภาค"];
-      regionCounts[region] = (regionCounts[region] ?? 0) + 1;
+    const activityCounts: Record<string, number> = {};
+    activityOption.forEach((key) => {
+      activityCounts[key] = activityCount[key] || 0;
     });
-    // fill zeros for any region you care about
+
+    const allRegionCounts: Record<string, number> = {};
     REGIONS.forEach((r) => {
-      regionCounts[r] = regionCounts[r] ?? 0;
+      allRegionCounts[r] = regionCounts[r] || 0;
     });
 
-    return { provinces: provinces.size, statusCounts, regionCounts };
+    return {
+      provinces: provinces.size,
+      statusCounts,
+      activityCounts,
+      regionCounts: allRegionCounts,
+    };
   }, [schoolData]);
+
+  console.log("summaryData", summaryData);
   const handleRegionChange = (region: string[] | null | undefined) => {
     if (region) {
       setSelectedRegion(region);
@@ -413,22 +446,15 @@ const Dashboard: React.FC = () => {
         <div className="flex-1">
           {/* Secondary Stats */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            {activityOption.map((activity) => {
-              const activityCount = Object.values(schoolData).filter((row) =>
-                row.some((item) => {
-                  const activityArr: { activity: string; date: string }[] =
-                    item["activityArr"] !== ""
-                      ? JSON.parse(item["activityArr"])
-                      : [];
-                  const sortedDesc = _.orderBy(
-                    activityArr,
-                    [(r) => new Date(r.date).getTime()],
-                    ["desc"]
-                  );
-                  const lastActivity = _.last(sortedDesc);
-                  return lastActivity?.activity === activity;
-                })
-              ).length;
+            {[
+              "ส่งหนังสือเชิญ",
+              "นัดหมาย+ส่งหนังสือขอชี้แจง+สำรวจ",
+              "ประเมินโครงการ+เตรียมทำข้อเสนอ",
+              "นัดวันนำเสนอข้อเสนอโครงการ",
+              "ติดตามสถานะโรงเรียนพิจารณาข้อเสนอ",
+              "ติดตามตามเอกสารรอเซ็นต์สัญญา",
+              "ยกเลิกไม่ทำโครงการ",
+            ].map((activity) => {
               return (
                 <div
                   key={activity}
@@ -436,7 +462,9 @@ const Dashboard: React.FC = () => {
                 >
                   {/* <div className="text-green-500 text-2xl mb-1">✓</div> */}
                   <div className="text-sm text-gray-600">{activity}</div>
-                  <div className="text-2xl font-bold">{activityCount}</div>
+                  <div className="text-2xl font-bold">
+                    {summaryData.activityCounts[activity] || 0}
+                  </div>
                 </div>
               );
             })}
