@@ -409,7 +409,7 @@ function Dashboard() {
                           <div className="flex items-center">
                             <div>
                               {(
-                                parseFloat(item["รวมKW_PK"]) || 0
+                                parseFloat(String(item["รวมKW_PK"] ||0)) || 0
                               )?.toLocaleString()}
                             </div>
                           </div>

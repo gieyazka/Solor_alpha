@@ -327,7 +327,6 @@ export default function SolarCellForm() {
     }
   }, [watchedValues, setValue]);
 
-
   return (
     <div className="relative pt-2 min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 pb-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8  ">
@@ -1020,9 +1019,9 @@ export default function SolarCellForm() {
               </div>
               <div className="mt-4">
                 <label className={labelClasses}>หมายเหตุ</label>
-                <input
-                  type="text"
-                  className={inputClasses}
+
+                <textarea
+                  className={`${inputClasses} h-12`}
                   placeholder="หมายเหตุ"
                   {...register("หมายเหตุของโรงเรียน")}
                 />
@@ -1117,9 +1116,8 @@ export default function SolarCellForm() {
               </div>
               <div className="mt-4">
                 <label className={labelClasses}>หมายเหตุ</label>
-                <input
-                  type="text"
-                  className={inputClasses}
+                <textarea
+                  className={`${inputClasses} h-12`}
                   placeholder="หมายเหตุ"
                   {...register("หมายเหตุของพื้นที่")}
                 />
