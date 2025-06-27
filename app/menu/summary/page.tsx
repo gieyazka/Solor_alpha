@@ -18,6 +18,8 @@ import {
 } from "../dashboard/autocomplete";
 import _ from "lodash";
 import { StatusCard } from "./status";
+import FancySchoolDialog from "./dialog";
+import { SchoolData } from "@/@type";
 const REGIONS = [
   "เหนือ",
   "กลาง",
@@ -127,7 +129,14 @@ const CircularProgress: React.FC<CircularProgressProps> = ({
 
 const Dashboard: React.FC = () => {
   const masterData = useSchoolStore();
-
+  const [dailogState, setDialogState] = useState<{
+    open: boolean;
+    data?: string[];
+  }>({
+    data: undefined,
+    open: false,
+  });
+  const [selected, setSelected] = useState<string | undefined>(undefined);
   const [selectedRegion, setSelectedRegion] = useState<string[]>([]);
   const [selectedDepartment, setSelectedDepartment] = useState<string[]>([]);
   const [selectedProvince, setSelectedProvince] = useState<string[]>([]);
@@ -156,87 +165,138 @@ const Dashboard: React.FC = () => {
     eletricFilter,
   });
 
+  const onOpen = (data: string[]) => {
+    setDialogState({ data, open: true });
+  };
+
   const summaryData = useMemo(() => {
-    const provinces = new Set<string>();
+    const provincesSet = new Set<string>();
 
-    // เตรียมโครงสร้างตัวนับก่อน
-    const rawCounts: Record<string, number> = {};
-    const activityCount: Record<string, number> = {};
+    const statusCounts: Record<string, number> = {};
+    const statusItems: Record<string, { schoolName: string; id: number }[]> =
+      {};
+    const activityCounts: Record<string, number> = {};
+    const activityItems: Record<string, { schoolName: string; id: number }[]> =
+      {};
     const regionCounts: Record<string, number> = {};
+    const regionItems: Record<string, { schoolName: string; id: number }[]> =
+      {};
 
-    // ลดเหลือรอบเดียว
-    Object.values(schoolData).forEach((rows) => {
-      if (rows.length === 0) {
-        // ยังไม่ดำเนินการ
-        rawCounts["ยังไม่ได้ดำเนินการ"] =
-          (rawCounts["ยังไม่ได้ดำเนินการ"] || 0) + 1;
-        activityCount["ยังไม่ได้ดำเนินการ"] =
-          (activityCount["ยังไม่ได้ดำเนินการ"] || 0) + 1;
-        return;
-      }
+    // initialize keys
+    const statusKeys = ["ยังไม่ได้ดำเนินการ", ...statusOption];
+    statusKeys.forEach((k) => {
+      statusCounts[k] = 0;
+      statusItems[k] = [];
+    });
 
-      const first = rows[0];
+    const activityKeys = activityOption;
+    activityKeys.forEach((k) => {
+      activityCounts[k] = 0;
+      activityItems[k] = [];
+    });
+    // กรณีมี default “ยังไม่ได้ดำเนินการ” ใน activity
+    if (!activityCounts["ยังไม่ได้ดำเนินการ"]) {
+      activityCounts["ยังไม่ได้ดำเนินการ"] = 0;
+      activityItems["ยังไม่ได้ดำเนินการ"] = [];
+    }
+
+    const regionKeys = REGIONS;
+    regionKeys.forEach((r) => {
+      regionCounts[r] = 0;
+      regionItems[r] = [];
+    });
+
+    // วนข้อมูลแต่ละโรงเรียน
+    Object.entries(schoolData).forEach(([schoolKey, rows]) => {
       // เก็บจังหวัด
-      provinces.add(first["ชื่อจังหวัด"]);
-      // เก็บภาค
-      const region = first["ภาค"];
-      regionCounts[region] = (regionCounts[region] || 0) + 1;
+      const first = rows[0];
+      const province = first?.["ชื่อจังหวัด"];
+      if (province) provincesSet.add(province);
 
-      // หาสถานะสุดท้าย
-      const statusArr: { status: string; date: string }[] = JSON.parse(
-        first.statusArr || "[]"
-      );
-      let lastStatus = "";
-      if (statusArr.length) {
-        statusArr.sort((a, b) => +new Date(a.date) - +new Date(b.date));
-        lastStatus = statusArr[statusArr.length - 1].status;
+      // ── Region ──
+      const region = first?.["ภาค"];
+      if (region && regionItems[region]) {
+        regionCounts[region]++;
+        regionItems[region].push({ schoolName: schoolKey, id: rows[0].id });
       }
-      // ปรับ prefix
+
+      // ── Status ──
+      let statusArr: { status: string; date: string }[] = [];
+      try {
+        statusArr = JSON.parse(first?.statusArr || "[]");
+      } catch {}
+      let lastStatus = statusArr.length
+        ? statusArr.sort((a, b) => +new Date(a.date) - +new Date(b.date)).pop()!
+            .status
+        : "";
       if (lastStatus.startsWith("ยกเลิก")) lastStatus = "ยกเลิก";
       else if (lastStatus.startsWith("ไม่สนใจ")) lastStatus = "ไม่สนใจ";
       else if (!lastStatus) lastStatus = "ยังไม่ได้ดำเนินการ";
-      rawCounts[lastStatus] = (rawCounts[lastStatus] || 0) + 1;
 
-      // หากิจกรรมสุดท้าย
-      const actArr: { activity: string; date: string }[] = JSON.parse(
-        first.activityArr || "[]"
-      );
-      let lastAct = "";
-      if (actArr.length) {
-        actArr.sort((a, b) => +new Date(a.date) - +new Date(b.date));
-        lastAct = actArr[actArr.length - 1].activity;
+      if (!statusItems[lastStatus]) {
+        statusItems[lastStatus] = [];
+        statusCounts[lastStatus] = 0;
       }
-      // ปรับ prefix ถ้าต้องการ (ตัวอย่างนี้ใช้ startsWith เดียวกับ status ไม่ได้แปลง)
-      if (lastAct.startsWith("ส่งหนังสือเชิญ")) lastAct = "ส่งหนังสือเชิญ";
-      else if (!lastAct) lastAct = "ยังไม่ได้ดำเนินการ";
-      activityCount[lastAct] = (activityCount[lastAct] || 0) + 1;
+      statusCounts[lastStatus]++;
+      statusItems[lastStatus].push({ schoolName: schoolKey, id: rows[0].id });
+
+      // ── Activity ──
+      let actArr: { activity: string; date: string }[] = [];
+      try {
+        actArr = JSON.parse(first.activityArr || "[]");
+      } catch {}
+
+      // หา activity สุดท้าย
+      let rawAct = "";
+      if (actArr.length) {
+        rawAct = actArr
+          .sort((a, b) => +new Date(a.date) - +new Date(b.date))
+          .pop()!.activity;
+      }
+
+      // รวมทุก prefix เป็นคีย์เดียว
+      let lastAct = "";
+      if (rawAct.startsWith("ส่งหนังสือเชิญ")) {
+        lastAct = "ส่งหนังสือเชิญ";
+      } else if (!rawAct) {
+        lastAct = "ยังไม่ได้ดำเนินการ";
+      } else {
+        lastAct = rawAct;
+      }
+
+      // init bucket ถ้ายังไม่มี
+      if (!activityItems[lastAct]) {
+        activityItems[lastAct] = [];
+        activityCounts[lastAct] = 0;
+      }
+
+      // เก็บนับและเก็บ key ของโรงเรียน
+      activityCounts[lastAct]++;
+      activityItems[lastAct].push({ schoolName: schoolKey, id: rows[0].id });
     });
 
-    // เติม 0 ให้ครบทุก key ตาม options
-    const statusCounts: Record<string, number> = {};
-    ["ยังไม่ได้ดำเนินการ", ...statusOption].forEach((key) => {
-      statusCounts[key] = rawCounts[key] || 0;
-    });
-
-    const activityCounts: Record<string, number> = {};
-    activityOption.forEach((key) => {
-      activityCounts[key] = activityCount[key] || 0;
-    });
-
-    const allRegionCounts: Record<string, number> = {};
-    REGIONS.forEach((r) => {
-      allRegionCounts[r] = regionCounts[r] || 0;
-    });
+    // สร้างลิสต์คีย์จาก object จริง
+    const statusKeysList = Object.keys(statusItems);
+    const activityKeysList = Object.keys(activityItems);
+    const regionKeysList = Object.keys(regionItems);
 
     return {
-      provinces: provinces.size,
-      statusCounts,
-      activityCounts,
-      regionCounts: allRegionCounts,
-    };
-  }, [schoolData]);
+      provincesCount: provincesSet.size,
+      provincesList: Array.from(provincesSet),
 
-  console.log("summaryData", summaryData);
+      statusCounts,
+      statusItems,
+      statusKeysList,
+
+      activityCounts,
+      activityItems,
+      activityKeysList,
+
+      regionCounts,
+      regionItems,
+      regionKeysList,
+    };
+  }, [schoolData, statusOption, activityOption, REGIONS]);
   const handleRegionChange = (region: string[] | null | undefined) => {
     if (region) {
       setSelectedRegion(region);
@@ -335,6 +395,13 @@ const Dashboard: React.FC = () => {
     <div className=" bg-gray-50 p-4">
       {/* Header */}
       <div className="mb-6">
+        <FancySchoolDialog
+          open={dailogState.open}
+          schools={dailogState.data || []}
+          selectedSchool={selected}
+          onSelect={(s) => setSelected(s)}
+          onClose={() => setDialogState({ open: false })}
+        />
         <div className="flex flex-wrap gap-2 mb-4">
           <CustomAutoComplete
             label="เลือกภูมิภาค"
@@ -422,7 +489,7 @@ const Dashboard: React.FC = () => {
           bgColor="bg-green-500"
         />
         <StatCard
-          value={summaryData.provinces.toLocaleString()}
+          value={summaryData.provincesCount.toLocaleString()}
           label="จำนวนจังหวัด"
           icon={<MapPin />}
           bgColor="bg-orange-500"
@@ -457,8 +524,14 @@ const Dashboard: React.FC = () => {
             ].map((activity) => {
               return (
                 <div
+                  onClick={() => {
+                    const schoolNameList = summaryData.activityItems[
+                      activity
+                    ].map((d) => d.schoolName);
+                    onOpen(schoolNameList);
+                  }}
                   key={activity}
-                  className="bg-white p-6 rounded-xl shadow-lg text-center"
+                  className="bg-white p-6 rounded-xl shadow-lg text-center cursor-pointer hover:bg-gray-100 transition-all duration-300"
                 >
                   {/* <div className="text-green-500 text-2xl mb-1">✓</div> */}
                   <div className="text-sm text-gray-600">{activity}</div>
@@ -470,68 +543,27 @@ const Dashboard: React.FC = () => {
             })}
           </div>
 
-          {/* <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div className="bg-white p-4 rounded-xl shadow-lg text-center">
-              <div className="text-green-500 text-2xl mb-1">✓</div>
-              <div className="text-2xl font-bold">1,160</div>
-              <div className="text-sm text-gray-600">โรงเรียน สมอ</div>
-            </div>
-            <div className="bg-white p-4 rounded-xl shadow-lg text-center">
-              <div className="text-red-500 text-2xl mb-1">✗</div>
-              <div className="text-2xl font-bold">0</div>
-              <div className="text-sm text-gray-600">โรงเรียน ไม่สมอ</div>
-            </div>
-            <div className="bg-white p-4 rounded-xl shadow-lg text-center">
-              <div className="text-blue-500 text-2xl mb-1">📊</div>
-              <div className="text-2xl font-bold">180</div>
-              <div className="text-sm text-gray-600">
-                ติดตามเอกสารกิจกรรมต่าง
-              </div>
-            </div>
-            <div className="bg-white p-4 rounded-xl shadow-lg text-center">
-              <div className="text-yellow-500 text-2xl mb-1">👥</div>
-              <div className="text-2xl font-bold">20</div>
-              <div className="text-sm text-gray-600">รองสมาชิกสัญญา</div>
-            </div>
-          </div> */}
-
-          {/* Additional Stats */}
-          {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <div className="bg-white p-6 rounded-xl shadow-lg text-center">
-              <div className="text-orange-400 text-4xl mb-2">📈</div>
-              <div className="text-3xl font-bold mb-2">250</div>
-              <div className="text-sm text-gray-600">
-                โครงการส่วนรวมโครงการส่วนสำคัญชาวบ้าน
-              </div>
-            </div>
-            <div className="bg-white p-6 rounded-xl shadow-lg text-center">
-              <div className="text-green-400 text-4xl mb-2">💰</div>
-              <div className="text-3xl font-bold mb-2">200</div>
-              <div className="text-sm text-gray-600">
-                ตอบรับของส่วนรวมโครงการส่วนสำคัญชาวบ้าน
-              </div>
-            </div>
-          </div> */}
-
           {/* Circular Progress Charts */}
           <div className="grid grid-cols-3 md:grid-cols- lg:grid-cols-5 gap-3">
             {["ยังไม่ได้ดำเนินการ", ...statusOption].map((status) => {
               return (
-                <StatusCard
-                  key={status}
-                  count={summaryData.statusCounts[status]}
-                  label={status}
-                  percentage={
-                    (100 * summaryData.statusCounts[status]) / totalSchool
-                  }
-                />
-                // <CircularProgress
-                //   key={status}
-                //   current={summaryData.statusCounts[status]}
-                //   total={totalSchool}
-                //   label={status}
-                //   size="sm"
-                // />
+                <div
+                key={status}
+                onClick={() => {
+                    const schoolNameList = summaryData.statusItems[
+                      status
+                    ].map((d) => d.schoolName);
+                    onOpen(schoolNameList);
+                  }}
+                >
+                  <StatusCard
+                    count={summaryData.statusCounts[status]}
+                    label={status}
+                    percentage={
+                      (100 * summaryData.statusCounts[status]) / totalSchool
+                    }
+                  />
+                </div>
               );
             })}
           </div>

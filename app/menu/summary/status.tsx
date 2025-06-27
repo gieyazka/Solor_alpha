@@ -24,6 +24,7 @@ export function StatusCard({
 }: StatusCardProps) {
   return (
     <Card
+      className="cursor-pointer hover:bg-gray-100 transition-all duration-300"
       sx={{
         width: "100%",
         // width: size + 24, // add some padding

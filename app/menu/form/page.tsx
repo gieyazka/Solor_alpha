@@ -137,10 +137,6 @@ export default function SolarCellForm() {
       }
       return data[key as keyof SchoolData] ?? "";
     });
-    // console.log("rowUpdate", rowUpdate);
-    // console.log("endColLetter", endColLetter);
-    // console.log("startColumn", startColLetter);
-    // console.log("rowData", rowData);
 
     try {
       const res = await updateMasterData({
@@ -152,6 +148,10 @@ export default function SolarCellForm() {
 
       // TODO: update data
       alert("✅ เขียนข้อมูลสำเร็จ");
+      const section = document.getElementById("topForm");
+      if (section) {
+        section.scrollIntoView({ behavior: "smooth" });
+      }
       masterStore.updateData({
         id: String(data.id),
         data: rowData as string[],
@@ -556,7 +556,7 @@ export default function SolarCellForm() {
                           const sum =
                             (Number(total) || 0) + (Number(input) || 0);
 
-                          setValue("รวมKW_PK", String(sum));
+                          setValue("รวมKW_PK", String(sum.toFixed(2)));
                           setValue(`meterArrObject.${index}.kw_pk`, input);
                         }}
                       />
