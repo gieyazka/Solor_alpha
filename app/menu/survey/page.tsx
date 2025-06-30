@@ -1,5 +1,5 @@
 "use client";
-import { useForm, Controller, useFieldArray } from "react-hook-form";
+import { useForm, Controller, useFieldArray, useWatch } from "react-hook-form";
 import {
   Box,
   Button,
@@ -9,6 +9,7 @@ import {
   FormControlLabel,
   FormGroup,
   FormLabel,
+  IconButton,
   InputLabel,
   MenuItem,
   Radio,
@@ -22,8 +23,12 @@ import { useSchoolStore } from "@/stores";
 import { SchoolData } from "@/@type";
 import { inputClasses, labelClasses, sectionClasses } from "@/utils/style";
 import clsx from "clsx";
-import { CheckCircle, X } from "lucide-react";
+import { CheckCircle, Delete, Edit, X } from "lucide-react";
 import { Details } from "@mui/icons-material";
+import StructureModal, { StructureFormValues } from "./dialog";
+import { useEffect, useMemo, useState } from "react";
+import _ from "lodash";
+import { usePreviews, usePreviewsArr, usePreviewsSimple } from "./preview";
 
 type FormData = {
   // Section 0
@@ -48,10 +53,36 @@ type FormData = {
   // gridProviderMEA: boolean;
   gridProvider: string;
   // gridProviderPEA: boolean;
+  // Section 3
+  building: StructureFormValues[];
+  docsReceived: {
+    roofplan: boolean;
+    buildingplan: boolean;
+    elecplan: boolean;
+    monthlybill: boolean;
+    loadprofile: boolean;
+  };
+  remark: string;
   voltageLevel: boolean[];
   transformerCount: number;
   transformerSize1: string;
   transformerSize2: string;
+
+  zeroExportCabinet: {
+    name: string;
+    photos?: File;
+  }[];
+  solarCellCabinet: {
+    name: string;
+    photos?: File;
+  }[];
+  solarCellBuiling: {
+    name: string;
+    photos: File[];
+  }[];
+  topviewImage?: File[];
+  bottomViewImage?: File[];
+
   // etc...
 };
 const voltageoptions = [
@@ -65,7 +96,18 @@ const voltageoptions = [
 ];
 export default function SurveyForm() {
   const masterStore = useSchoolStore();
-  const { handleSubmit, control, register, watch, setValue } =
+
+  const [isOpen, setIsOpen] = useState<{
+    data?: StructureFormValues | undefined;
+    index?: number | undefined;
+    open: boolean;
+  }>({
+    data: undefined,
+    index: undefined,
+    open: false,
+  });
+
+  const { handleSubmit, control, register, watch, setValue, getValues } =
     useForm<FormData>({
       defaultValues: {
         // initialize defaults if you like
@@ -82,10 +124,14 @@ export default function SurveyForm() {
             meter: "",
           },
         ],
+
         gridProvider: "",
         // gridProviderMEA: false,
         // gridProviderPEA: false,
         voltageLevel: [],
+        zeroExportCabinet: [{ name: "", photos: undefined }],
+        solarCellCabinet: [{ name: "", photos: undefined }],
+        solarCellBuiling: [{ name: "", photos: [] }],
       },
     });
 
@@ -98,6 +144,37 @@ export default function SurveyForm() {
     name: "transformer",
   });
 
+  const zeroExportCabinetArrForm = useFieldArray({
+    name: "zeroExportCabinet",
+    control,
+  });
+  const solarCellCabinetArrForm = useFieldArray({
+    name: "solarCellCabinet",
+    control,
+  });
+  const solarCellBuilingtArrForm = useFieldArray({
+    name: "solarCellBuiling",
+    control,
+  });
+
+  // ② useMemo ดูที่ zeroList (reference ใหม่ทุกครั้งที่ photos เปลี่ยน)
+  const zeroPreviews = usePreviews(control, "zeroExportCabinet");
+  const solarPreviews = usePreviews(control, "solarCellCabinet");
+  const solarCellBuilingPreviews = usePreviewsArr(control, "solarCellBuiling");
+  const topPreviews = usePreviewsSimple(control, "topviewImage");
+  const bottomPreviews = usePreviewsSimple(control, "bottomViewImage");
+  // ③ ล้าง URL เก่า
+  useEffect(() => {
+    return () => {
+      zeroPreviews.forEach((u) => u && URL.revokeObjectURL(u));
+      solarPreviews.forEach((u) => u && URL.revokeObjectURL(u));
+    };
+  }, [zeroPreviews, solarPreviews]);
+
+  const [previews, setPreviews] = useState<string[]>([]);
+
+  // Generate previews whenever the FileList changes
+
   // console.log(watch());
   const onSubmit = (data: FormData) => {
     console.log("Form data:", data);
@@ -106,6 +183,23 @@ export default function SurveyForm() {
     setValue("schoolName", data?.[0]["ชื่อโรงเรียน"]!);
     setValue("address", data?.[0]["ที่อยู่"]!);
     setValue("gps", data?.[0]["Latitude"]! + "," + data?.[0]["Longitude"]!);
+  };
+
+  const onEditBuilding = (props: {
+    data: StructureFormValues;
+    index: number;
+  }) => {
+    setIsOpen({
+      data: props.data,
+      index: props.index,
+      open: true,
+    });
+  };
+
+  const onDeleteBuilding = (index: number) => {
+    const building = _.cloneDeep(watch("building") || []);
+    building.splice(index, 1);
+    setValue("building", building);
   };
   return (
     <Container maxWidth="lg" className="py-8">
@@ -387,9 +481,7 @@ export default function SurveyForm() {
                   <div className="gap-2 flex w-full  ">
                     <div className=" gap-2 flex-1">
                       <label
-                        className={clsx(
-                          ` whitespace-nowrap ` + labelClasses
-                        )}
+                        className={clsx(` whitespace-nowrap ` + labelClasses)}
                       >
                         พิกัดหม้อแปลงที่ {index + 1}
                       </label>
@@ -402,9 +494,7 @@ export default function SurveyForm() {
                     </div>
                     <div className=" gap-2 flex-1">
                       <label
-                        className={clsx(
-                          ` whitespace-nowrap ` + labelClasses
-                        )}
+                        className={clsx(` whitespace-nowrap ` + labelClasses)}
                       >
                         kva/มิเตอร์ {index + 1}
                       </label>
@@ -453,77 +543,71 @@ export default function SurveyForm() {
         </div>
 
         {/* Section 3 */}
+        <StructureModal
+          isOpen={isOpen.open}
+          onClose={() => {
+            setIsOpen({ open: false });
+          }}
+          buildingData={isOpen.data}
+          onSubmit={(data: StructureFormValues) => {
+            console.log("onSubmit", data);
+            const building = watch("building") || [];
+            building.push(data);
+            setValue("building", building);
+          }}
+        />
         <div className={sectionClasses}>
-          <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-4">
-            3. ข้อมูลโครงสร้าง
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div>
-              <label className={labelClasses}>อาคาร</label>
-              <input
-                type="text"
-                className={inputClasses}
-                {...register("structureBuilding")}
-              />
-            </div>
-            {/* Roof Ages */}
-            {["RoofRomanAge", "RoofCPACAge", "RoofMetalAge", "Other"].map(
-              (key) => (
-                <div key={key}>
-                  <label className={labelClasses}>{key} (ปี)</label>
-                  <input
-                    type="text"
-                    className={inputClasses}
-                    {...register(`roofAges.${key}` as const)}
-                  />
+          <div className="flex items-center justify-between">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-4">
+              3. ข้อมูลโครงสร้าง
+            </h3>
+            <Button
+              variant="contained"
+              onClick={() =>
+                setIsOpen({
+                  open: true,
+                })
+              }
+            >
+              เพิ่มอาคาร
+            </Button>
+          </div>
+          <div>
+            {(watch("building") || []).map((building, index) => (
+              <div
+                className="grid grid-cols-1 sm:flex  gap-6 items-center mt-2"
+                key={index}
+              >
+                <div className="flex-1   flex gap-4 sm:gap-12 ">
+                  <p>อาคารที่ {index + 1}</p>
+                  <p className="">ชื่ออาคาร : {building.buildingName}</p>
                 </div>
-              )
-            )}
-            <div>
-              <label className={labelClasses}>ขนาดพื้นที่ (ตร.ม.)</label>
-              <input
-                type="text"
-                className={inputClasses}
-                {...register("structureArea")}
-              />
-            </div>
-            <div>
-              <label className={labelClasses}>ความชัน (°)</label>
-              <select className={inputClasses} {...register("roofAngle")}>
-                {[0, 10, 15, 20, 25, 30, 35, 40, 45].map((deg) => (
-                  <option key={deg} value={deg}>
-                    {deg}°
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="col-span-full">
-              <label className={labelClasses}>รูปทรงหลังคา</label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {["Hip", "Gable", "Flat", "Shed"].map((shape) => (
-                  <label key={shape} className="flex items-center">
-                    <Controller
-                      name="roofShapes"
-                      control={control}
-                      render={({ field }) => (
-                        <input
-                          type="checkbox"
-                          value={shape}
-                          // checked={field.value.includes(shape)}
-                          // onChange={(e) => {
-                          //   const v = e.target.checked
-                          //     ? [...field.value, shape]
-                          //     : field.value.filter((x) => x !== shape);
-                          //   field.onChange(v);
-                          // }}
-                        />
-                      )}
-                    />
-                    <span className="ml-2">{shape}</span>
-                  </label>
-                ))}
+                <div className="flex gap-2 w-full  sm:w-fit">
+                  <Button
+                    className="w-full"
+                    color="error"
+                    variant="contained"
+                    onClick={() => onDeleteBuilding(index)}
+                  >
+                    <label className="flex items-center gap-2">
+                      <Delete className="" />
+                      ลบ
+                    </label>
+                  </Button>
+                  <Button
+                    className="w-full"
+                    variant="contained"
+                    color="primary"
+                    onClick={() => onEditBuilding({ data: building, index })}
+                  >
+                    <label className="flex items-center gap-2">
+                      <Edit className="" />
+                      แก้ไข
+                    </label>
+                  </Button>
+                </div>
               </div>
-            </div>
+            ))}
           </div>
         </div>
 
@@ -534,21 +618,25 @@ export default function SurveyForm() {
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {[
-              "RoofPlan",
-              "BuildingPlan",
-              "ElecPlan",
-              "MonthlyBill",
-              "LoadProfile",
+              { label: "แบบโครงสร้างหลังคา", value: "roofplan" },
+              { label: "แบบอาคาร", value: "buildingplan" },
+              { label: "แบบไฟฟ้า", value: "elecplan" },
+              { label: "ใบแจ้งหนี้ค่าไฟฟ้ารายเดือน", value: "monthlybill" },
+              { label: "Load Profile / AMR", value: "loadprofile" },
             ].map((doc) => (
-              <label key={doc} className="flex items-center">
+              <label key={doc.value} className="flex items-center">
                 <Controller
-                  name={`docsReceived.${doc}` as const}
+                  name={`docsReceived.${doc.value}` as any}
                   control={control}
                   render={({ field }) => (
-                    <input type="checkbox" {...field} checked={field.value} />
+                    <input
+                      type="checkbox"
+                      {...field}
+                      checked={field.value || false}
+                    />
                   )}
                 />
-                <span className="ml-2">{doc}</span>
+                <span className="ml-2">{doc.label}</span>
               </label>
             ))}
           </div>
@@ -559,32 +647,299 @@ export default function SurveyForm() {
           <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-4">
             5. บันทึก
           </h3>
-          <textarea className={`${inputClasses} h-32`} {...register("note")} />
+          <textarea
+            className={`${inputClasses} h-32`}
+            {...register("remark")}
+          />
         </div>
 
         {/* Section 6 */}
         <div className={sectionClasses}>
           <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-4">
-            6. รูปถ่าย
+            6. รูปถ่าย (Pictures)
           </h3>
           <div className="space-y-4">
+            <label className={labelClasses}>
+              6.1 ตู้ไฟฟ้าที่จะติดตั้งระบบ Zero export
+            </label>
+            {zeroExportCabinetArrForm?.fields.map((field, idx) => (
+              <div key={field.id} className="flex   gap-4 items-center">
+                <input
+                  placeholder="ตู้ ไฟฟ้า อาคาร"
+                  {...register(`zeroExportCabinet.${idx}.name` as const)}
+                  className="block w-1/3 h-fit border px-2 py-1"
+                />
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file)
+                      setValue(
+                        `zeroExportCabinet.${idx}.photos` as const,
+                        file,
+                        { shouldDirty: true, shouldValidate: true }
+                      );
+                  }}
+                />
+                {
+                  <>
+                    {zeroPreviews[idx] !== "" &&
+                    zeroPreviews[idx] !== undefined ? (
+                      <img
+                        src={zeroPreviews[idx]}
+                        className="w-24 h-24 object-cover rounded"
+                      />
+                    ) : (
+                      <div className="w-24 h-24 bg-gray-200 rounded"></div>
+                    )}
+                  </>
+                }
+                <div className="pb-1 flex gap-2 items-end">
+                  {idx !== 0 ? (
+                    <Button
+                      onClick={() => zeroExportCabinetArrForm.remove(idx)}
+                      color="error"
+                      className="h-fit  "
+                      variant="contained"
+                    >
+                      {" "}
+                      <X className="" />{" "}
+                    </Button>
+                  ) : (
+                    <div className="w-16"></div>
+                  )}
+                  <Button
+                    onClick={() =>
+                      zeroExportCabinetArrForm.append({
+                        name: "",
+                        photos: undefined,
+                      })
+                    }
+                    className="h-fit "
+                    variant="contained"
+                  >
+                    {" "}
+                    <X className="rotate-45" />{" "}
+                  </Button>
+                </div>
+              </div>
+            ))}
+
             <div>
-              <label className={labelClasses}>6.1 ตู้ไฟ Zero export</label>
-              <input
-                type="file"
-                multiple
-                className="mt-1"
-                {...register("zeroExportImages")}
-              />
+              <label className={labelClasses}>
+                6.2 ตู้ไฟฟ้าที่จะเชื่อมต่อระบบโซล่าเซลล์
+              </label>
+              {solarCellCabinetArrForm?.fields.map((field, idx) => (
+                <div key={field.id} className="flex   gap-4 items-center">
+                  <input
+                    placeholder="ตู้ ไฟฟ้า อาคาร"
+                    {...register(`solarCellCabinet.${idx}.name` as const)}
+                    className="block w-1/3 h-fit border px-2 py-1"
+                  />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file)
+                        setValue(
+                          `solarCellCabinet.${idx}.photos` as const,
+                          file,
+                          { shouldDirty: true, shouldValidate: true }
+                        );
+                    }}
+                  />
+                  {
+                    <>
+                      {solarPreviews[idx] !== "" &&
+                      solarPreviews[idx] !== undefined ? (
+                        <img
+                          src={solarPreviews[idx]}
+                          className="w-24 h-24 object-cover rounded"
+                        />
+                      ) : (
+                        <div className="w-24 h-24 bg-gray-200 rounded"></div>
+                      )}
+                    </>
+                  }
+                  <div className="pb-1 flex gap-2 items-end">
+                    {idx !== 0 ? (
+                      <Button
+                        onClick={() => solarCellCabinetArrForm.remove(idx)}
+                        color="error"
+                        className="h-fit  "
+                        variant="contained"
+                      >
+                        {" "}
+                        <X className="" />{" "}
+                      </Button>
+                    ) : (
+                      <div className="w-16"></div>
+                    )}
+                    <Button
+                      onClick={() =>
+                        solarCellCabinetArrForm.append({
+                          name: "",
+                          photos: undefined,
+                        })
+                      }
+                      className="h-fit "
+                      variant="contained"
+                    >
+                      {" "}
+                      <X className="rotate-45" />{" "}
+                    </Button>
+                  </div>
+                </div>
+              ))}
             </div>
             <div>
-              <label className={labelClasses}>6.2 ตู้ไฟ Solar cell</label>
-              <input
-                type="file"
-                multiple
-                className="mt-1"
-                {...register("cellImages")}
-              />
+              <label className={labelClasses}>
+                6.3 อาคารที่จะติดตั้งเเผงโซล่าเซลล์
+              </label>
+              {solarCellBuilingtArrForm.fields.map((field, i) => (
+                <div key={field.id} className="border p-3 rounded space-y-2">
+                  <input
+                    {...register(`solarCellBuiling.${i}.name` as const)}
+                    placeholder="ตู้ ไฟฟ้า อาคาร"
+                    className="w-full border px-2 py-1"
+                  />
+
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={(e) => {
+                      const files = e.target.files
+                        ? Array.from(e.target.files)
+                        : [];
+                      const old = watch(`solarCellBuiling.${i}.photos`) || [];
+                      setValue(
+                        `solarCellBuiling.${i}.photos` as const,
+                        [...old, ...files] as any,
+                        { shouldDirty: true, shouldValidate: true }
+                      );
+                    }}
+                  />
+
+                  {/* 4) แสดง preview หลายภาพ */}
+                  <div className="flex flex-wrap gap-2">
+                    {solarCellBuilingPreviews[i]?.map((src, j) => (
+                      <div key={j} className="relative w-24 h-24">
+                        <img
+                          src={src}
+                          alt={`preview ${j}`}
+                          className="object-cover w-full h-full rounded"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const old =
+                              getValues(`solarCellBuiling.${i}.photos`) || [];
+                            const next = old.filter((_, idx) => idx !== j);
+                            setValue(
+                              `solarCellBuiling.${i}.photos` as const,
+                              next,
+                              { shouldDirty: true }
+                            );
+                          }}
+                          className="absolute top-0 right-0 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              {/* 6.4 Top Images */}
+              <div className="space-y-2">
+                <h2 className="font-semibold">6.4 ภาพมุมสูง (โดยรวม)</h2>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={(e) => {
+                    const files = e.target.files
+                      ? Array.from(e.target.files)
+                      : [];
+                    const old = getValues("topviewImage");
+                    setValue("topviewImage", [...(old || []), ...files], {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    });
+                  }}
+                />
+                <div className="flex flex-wrap gap-2">
+                  {topPreviews.map((src, j) => (
+                    <div key={j} className="relative w-24 h-24">
+                      <img
+                        src={src}
+                        alt={`topviewImage ${j}`}
+                        className="object-cover w-full h-full rounded"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const old = getValues("topviewImage");
+                          const next = old?.filter((_, idx) => idx !== j);
+                          setValue("topviewImage", next, {
+                            shouldDirty: true,
+                          });
+                        }}
+                        className="absolute top-0 right-0 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 6.5 Bottom‐view Images */}
+              <div className="space-y-2">
+                <h2 className="font-semibold">6.5 ภาพมุมต่ำ (โดยรวม)</h2>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={(e) => {
+                    const files = e.target.files
+                      ? Array.from(e.target.files)
+                      : [];
+                    const old = getValues("bottomViewImage");
+                    setValue("bottomViewImage", [...(old || []), ...files], {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    });
+                  }}
+                />
+                <div className="flex flex-wrap gap-2">
+                  {bottomPreviews.map((src, j) => (
+                    <div key={j} className="relative w-24 h-24">
+                      <img
+                        src={src}
+                        alt={`bottomview ${j}`}
+                        className="object-cover w-full h-full rounded"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const old = getValues("bottomViewImage");
+                          const next = old?.filter((_, idx) => idx !== j);
+                          setValue("bottomViewImage", next, {
+                            shouldDirty: true,
+                          });
+                        }}
+                        className="absolute top-0 right-0 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>

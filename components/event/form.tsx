@@ -33,6 +33,8 @@ import { sendMessageToLine } from "@/actions/line";
 import { SchoolData } from "@/@type";
 import { writeToSheet } from "@/actions/excel";
 import { useRouter } from "next/navigation";
+import { useSchoolStore } from "@/stores";
+import { ScoolAutoComplete } from "@/app/menu/form/page";
 
 export default function EventForm(props: {
   keyMaster: { [k: string]: SchoolData };
@@ -58,6 +60,8 @@ export default function EventForm(props: {
     remark: "",
   });
   // console.log('schoolData', schoolData)
+  const masterStore = useSchoolStore();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -104,8 +108,11 @@ export default function EventForm(props: {
     }
   };
 
-  const handleChangeSchool = (data: SchoolData | undefined) => {
-    setSchoolData(data);
+  const handleChangeSchool = (data: SchoolData[] | undefined) => {
+    const d = data?.[0];
+    if (d && d.ชื่อโรงเรียน) {
+      setSchoolData(d);
+    }
   };
   const statusOptions = [
     "Project Present",
@@ -215,11 +222,10 @@ export default function EventForm(props: {
               </IconButton>
             </div>
             <Stack spacing={3}>
-              <AsynSchoolAutoComplete
-                masterData={props.masterData}
+              <ScoolAutoComplete
+                masterDataKey={masterStore.masterDataKey}
                 handleChangeSchool={handleChangeSchool}
               />
-
               <TextField
                 label="Province"
                 value={schoolData?.["ชื่อจังหวัด"] || ""}

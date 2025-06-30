@@ -1,0 +1,142 @@
+{
+    "projectId": "6854c399001565033cf3",
+    "projectName": "Solar",
+    "settings": {
+        "services": {
+            "account": true,
+            "avatars": true,
+            "databases": true,
+            "locale": true,
+            "health": true,
+            "storage": true,
+            "teams": true,
+            "users": true,
+            "sites": true,
+            "functions": true,
+            "graphql": true,
+            "messaging": true
+        },
+        "auth": {
+            "methods": {
+                "jwt": true,
+                "phone": true,
+                "invites": true,
+                "anonymous": true,
+                "email-otp": true,
+                "magic-url": true,
+                "email-password": true
+            },
+            "security": {
+                "duration": 31536000,
+                "limit": 0,
+                "sessionsLimit": 10,
+                "passwordHistory": 0,
+                "passwordDictionary": false,
+                "personalDataCheck": false,
+                "sessionAlerts": false,
+                "mockNumbers": []
+            }
+        }
+    },
+    "databases": [
+        {
+            "$id": "68582a4f0000f4e6e0a7",
+            "name": "solar",
+            "enabled": true
+        }
+    ],
+    "collections": [
+        {
+            "$id": "6860c2ea00248eb6ec8c",
+            "$permissions": [],
+            "databaseId": "68582a4f0000f4e6e0a7",
+            "name": "survey",
+            "enabled": true,
+            "documentSecurity": false,
+            "attributes": [
+                {
+                    "key": "school_name",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 256,
+                    "default": null
+                },
+                {
+                    "key": "location",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 1024,
+                    "default": null
+                },
+                {
+                    "key": "gps",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 256,
+                    "default": null
+                },
+                {
+                    "key": "kwp",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "min": -1.7976931348623157e+308,
+                    "max": 1.7976931348623157e+308,
+                    "default": null
+                },
+                {
+                    "key": "contact_name",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 125,
+                    "default": null
+                },
+                {
+                    "key": "contact_phone",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 15,
+                    "default": null
+                },
+                {
+                    "key": "surveyor",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null
+                }
+            ],
+            "indexes": []
+        },
+        {
+            "$id": "6860e47700069432afe5",
+            "$permissions": [],
+            "databaseId": "68582a4f0000f4e6e0a7",
+            "name": "survey_user_behavior",
+            "enabled": true,
+            "documentSecurity": false,
+            "attributes": [],
+            "indexes": []
+        }
+    ],
+    "buckets": [
+        {
+            "$id": "6854c7520005d9abb05f",
+            "$permissions": [],
+            "fileSecurity": false,
+            "name": "solar",
+            "enabled": true,
+            "maximumFileSize": 30000000,
+            "allowedFileExtensions": [],
+            "compression": "none",
+            "encryption": true,
+            "antivirus": true
+        }
+    ]
+}

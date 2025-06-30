@@ -37,3 +37,20 @@ export const ops: Record<Condition, (a: number, b: number) => boolean> = {
   "==": (a, b) => a === b,
   "!=": (a, b) => a !== b,
 };
+
+// const uploadedFile: { message?: string; data: resFile } =
+//   await uploadFile.json();
+// const imageUrl = formatUrlFile({
+//   bucketId: uploadedFile.data.bucketId,
+//   fileId: uploadedFile.data.$id!,
+// });
+
+export const formatUrlFile = ({
+  bucketId,
+  fileId,
+}: {
+  bucketId: string;
+  fileId: string;
+}) => {
+  return `${process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT}/storage/buckets/${bucketId}/files/${fileId}/view?project=${process.env.NEXT_PUBLIC_APPWRITE_PROJECT}`;
+};

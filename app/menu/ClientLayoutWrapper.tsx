@@ -17,6 +17,7 @@ import {
   Database,
   X,
   FormInputIcon,
+  HomeIcon,
 } from "lucide-react";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
@@ -26,7 +27,7 @@ import { useSchoolStore } from "@/stores/index";
 import { SchoolData } from "@/@type";
 import { usePathname, useRouter } from "next/navigation";
 import _ from "lodash";
-import { Summarize } from "@mui/icons-material";
+import { CalendarMonth, Description, HomeFilled, Summarize } from "@mui/icons-material";
 dayjs.locale("th");
 export default function ClientLayoutWrapper({
   initialData,
@@ -149,11 +150,11 @@ export default function ClientLayoutWrapper({
             <div className="p-4 h-screen ">
               <div className="space-y-2">
                 {[
-                  { id: "dashboard", icon: Home, label: "Dashboard" },
+                  { id: "dashboard", icon: HomeFilled, label: "Dashboard" },
                   { id: "summary", icon: Summarize, label: "Summary" },
-                  { id: "form", icon: FormInputIcon, label: "Form" },
+                  { id: "form", icon: Description, label: "Form" },
 
-                  { id: "event", icon: Calendar, label: "Calendar" },
+                  { id: "event", icon: CalendarMonth, label: "Calendar" },
                 ].map((item) => (
                   <button
                     key={item.id}
@@ -167,7 +168,7 @@ export default function ClientLayoutWrapper({
                         : "text-gray-600 hover:bg-gray-50"
                     }`}
                   >
-                    <item.icon size={20} />
+                    <item.icon  />
                     {(sidebarOpen || isMobile) && (
                       <span className="font-medium">{item.label}</span>
                     )}
