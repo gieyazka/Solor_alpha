@@ -20,7 +20,14 @@ import {
 } from "@mui/material";
 import { ScoolAutoComplete } from "../form/page";
 import { useSchoolStore } from "@/stores";
-import { SchoolData } from "@/@type";
+import {
+  SchoolData,
+  SurveyBuilding,
+  surveyCabinet,
+  surveySolarInstall,
+  surveyTransformer,
+  surveyUserBehavior,
+} from "@/@type";
 import { inputClasses, labelClasses, sectionClasses } from "@/utils/style";
 import clsx from "clsx";
 import { CheckCircle, Delete, Edit, X } from "lucide-react";
@@ -29,13 +36,27 @@ import StructureModal, { StructureFormValues } from "./dialog";
 import { useEffect, useMemo, useState } from "react";
 import _ from "lodash";
 import { usePreviews, usePreviewsArr, usePreviewsSimple } from "./preview";
+import { createSurvey } from "@/lib/survay.actions";
+import { ID } from "appwrite";
+import { createClientAppwrite } from "@/utils/appwrite_client";
+import pMap from "p-map";
+import { formatUrlFile } from "@/utils/fn";
+import {
+  formatBottomViewImage,
+  formatBuilding,
+  formatCabinet,
+  formatSolarCellInstall,
+  formatTopviewImage,
+  formatTransformer,
+  formatUserBehavior,
+} from "./fn";
 
-type FormData = {
+export type FormData = {
   // Section 0
   schoolName: string;
   address: string;
   schoolLocation: string;
-  kwp: string;
+  kwp: number;
   contactName: string;
   contactPhone: string;
   surveyor: string;
@@ -65,8 +86,6 @@ type FormData = {
   remark: string;
   voltageLevel: boolean[];
   transformerCount: number;
-  transformerSize1: string;
-  transformerSize2: string;
 
   zeroExportCabinet: {
     name: string;
@@ -107,7 +126,7 @@ export default function SurveyForm() {
     open: false,
   });
 
-  const { handleSubmit, control, register, watch, setValue, getValues } =
+  const { handleSubmit, control, reset,register, watch, setValue, getValues } =
     useForm<FormData>({
       defaultValues: {
         // initialize defaults if you like
@@ -124,7 +143,8 @@ export default function SurveyForm() {
             meter: "",
           },
         ],
-
+        kwp: 0,
+        transformerCount: 0,
         gridProvider: "",
         // gridProviderMEA: false,
         // gridProviderPEA: false,
@@ -176,9 +196,57 @@ export default function SurveyForm() {
   // Generate previews whenever the FileList changes
 
   // console.log(watch());
-  const onSubmit = (data: FormData) => {
+  const onSubmit = async (data: FormData) => {
     console.log("Form data:", data);
+    const transformer = formatTransformer(data.transformer);
+    const cabinets = await formatCabinet({
+      solarCellCabinet: data.solarCellCabinet,
+      zeroExportCabinet: data.zeroExportCabinet,
+    });
+    const userBehavior = formatUserBehavior(data.userBehavior);
+    const building = formatBuilding(data.building);
+
+    const solarCellBuiling = await formatSolarCellInstall({
+      solarCellBuiling: data.solarCellBuiling,
+    });
+
+    const topviewImage = await formatTopviewImage(data.topviewImage);
+    const bottomViewImage = await formatBottomViewImage(data.bottomViewImage);
+
+    const formatData = {
+      school_name: data.schoolName,
+      location: data.address,
+      gps: data.gps,
+      kwp: data.kwp,
+      contact_name: data.contactName,
+      contact_phone: data.contactPhone,
+      surveyor: data.surveyor,
+      roofplan: data.docsReceived.roofplan,
+      buildingplan: data.docsReceived.buildingplan,
+      elecplan: data.docsReceived.elecplan,
+      monthlybill: data.docsReceived.monthlybill,
+      loadprofile: data.docsReceived.loadprofile,
+      remark: data.remark,
+      voltageLevel: data.voltageLevel,
+      transformerCount: data.transformerCount,
+      topview_image: topviewImage,
+      bottomview_image: bottomViewImage,
+    };
+    await createSurvey({
+      data: formatData,
+      transformer: transformer,
+      cabinet: cabinets as Partial<surveyCabinet>[],
+      install_solar:
+        solarCellBuiling as unknown as Partial<surveySolarInstall>[],
+      rooftop_image: topviewImage,
+      bottom_view_image: bottomViewImage,
+      userBehavior: userBehavior as unknown as Partial<surveyUserBehavior>[],
+      building: building,
+    });
+    alert("บันทึกข้อมูลสำเร็จ");
+    reset();
   };
+
   const handleChangeSchool = (data: SchoolData[] | undefined) => {
     setValue("schoolName", data?.[0]["ชื่อโรงเรียน"]!);
     setValue("address", data?.[0]["ที่อยู่"]!);
@@ -203,6 +271,25 @@ export default function SurveyForm() {
   };
   return (
     <Container maxWidth="lg" className="py-8">
+      <StructureModal
+        isOpen={isOpen.open}
+        onClose={() => {
+          setIsOpen({ open: false });
+        }}
+        buildingData={isOpen.data}
+        onSubmit={(data: StructureFormValues) => {
+          if (isOpen.index !== undefined) {
+            const building = watch("building") || [];
+            building[isOpen.index] = data;
+            setValue("building", building);
+          } else {
+            const building = watch("building") || [];
+            building.push(data);
+            setValue("building", building);
+          }
+        }}
+      />
+
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
         {/* Section 0: รายงานการสำรวจและตรวจสอบเบื้องต้น */}
 
@@ -262,7 +349,9 @@ export default function SurveyForm() {
                   type="tel"
                   className={inputClasses}
                   placeholder="กำลังการผลิตติดตั้ง (kWp.)"
-                  {...register("kwp")}
+                  {...register("kwp", {
+                    valueAsNumber: true,
+                  })}
                 />
               </div>
               <div>
@@ -543,19 +632,7 @@ export default function SurveyForm() {
         </div>
 
         {/* Section 3 */}
-        <StructureModal
-          isOpen={isOpen.open}
-          onClose={() => {
-            setIsOpen({ open: false });
-          }}
-          buildingData={isOpen.data}
-          onSubmit={(data: StructureFormValues) => {
-            console.log("onSubmit", data);
-            const building = watch("building") || [];
-            building.push(data);
-            setValue("building", building);
-          }}
-        />
+
         <div className={sectionClasses}>
           <div className="flex items-center justify-between">
             <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-4">
@@ -800,11 +877,41 @@ export default function SurveyForm() {
               </label>
               {solarCellBuilingtArrForm.fields.map((field, i) => (
                 <div key={field.id} className="border p-3 rounded space-y-2">
-                  <input
-                    {...register(`solarCellBuiling.${i}.name` as const)}
-                    placeholder="ตู้ ไฟฟ้า อาคาร"
-                    className="w-full border px-2 py-1"
-                  />
+                  <div className="flex items-center gap-2">
+                    <input
+                      {...register(`solarCellBuiling.${i}.name` as const)}
+                      placeholder="ตู้ ไฟฟ้า อาคาร"
+                      className="w-full border px-2 py-1"
+                    />
+                    <div className="pb-1 flex gap-2 items-end">
+                      {i !== 0 ? (
+                        <Button
+                          onClick={() => solarCellBuilingtArrForm.remove(i)}
+                          color="error"
+                          className="h-fit  "
+                          variant="contained"
+                        >
+                          {" "}
+                          <X className="" />{" "}
+                        </Button>
+                      ) : (
+                        <div className="w-16"></div>
+                      )}
+                      <Button
+                        onClick={() =>
+                          solarCellBuilingtArrForm.append({
+                            name: "",
+                            photos: [],
+                          })
+                        }
+                        className="h-fit "
+                        variant="contained"
+                      >
+                        {" "}
+                        <X className="rotate-45" />{" "}
+                      </Button>
+                    </div>
+                  </div>
 
                   <input
                     type="file"

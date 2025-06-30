@@ -27,7 +27,13 @@ import { useSchoolStore } from "@/stores/index";
 import { SchoolData } from "@/@type";
 import { usePathname, useRouter } from "next/navigation";
 import _ from "lodash";
-import { CalendarMonth, Description, HomeFilled, Summarize } from "@mui/icons-material";
+import {
+  CalendarMonth,
+  Description,
+  EventNote,
+  HomeFilled,
+  Summarize,
+} from "@mui/icons-material";
 dayjs.locale("th");
 export default function ClientLayoutWrapper({
   initialData,
@@ -153,7 +159,7 @@ export default function ClientLayoutWrapper({
                   { id: "dashboard", icon: HomeFilled, label: "Dashboard" },
                   { id: "summary", icon: Summarize, label: "Summary" },
                   { id: "form", icon: Description, label: "Form" },
-
+                  { id: "survey", icon: EventNote, label: "Survey" },
                   { id: "event", icon: CalendarMonth, label: "Calendar" },
                 ].map((item) => (
                   <button
@@ -168,7 +174,7 @@ export default function ClientLayoutWrapper({
                         : "text-gray-600 hover:bg-gray-50"
                     }`}
                   >
-                    <item.icon  />
+                    <item.icon />
                     {(sidebarOpen || isMobile) && (
                       <span className="font-medium">{item.label}</span>
                     )}

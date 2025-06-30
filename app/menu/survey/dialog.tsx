@@ -37,9 +37,9 @@ export interface StructureFormValues {
   area: number;
   slopeDegree: number[];
   // 3.3
-  shapes: Record<string, boolean>;
+  shapes: Record<ShapeKey, boolean>;
   // 3.4
-  metalProfiles: Record<string, boolean>;
+  metalProfiles: Record<MetalSheetKey, boolean>;
   // 3.5
   pitch: number;
   // 3.6
@@ -48,10 +48,10 @@ export interface StructureFormValues {
     steel: { checked: boolean; type: string[]; age: number };
   };
   // 3.7–3.12
-  span1: number;
-  span2: number;
-  baySpacing: number;
-  lightOpening: number;
+  purlin_purlin: number;
+  rafter_rafter: number;
+  pillar_pillar: number;
+  skylight_purlin: number;
   widthEave1: number;
   widthEave2: number;
   // 3.13–3.16
@@ -62,7 +62,14 @@ export interface StructureFormValues {
   // 3.17
   otherNotes: string;
 }
-
+// 2) ช่วยแปลง S = "HELLO WORLD" → "HELLO_WORLD"
+type ReplaceSpaces<S extends string> = S extends `${infer Head} ${infer Tail}`
+  ? `${Head}_${ReplaceSpaces<Tail>}`
+  : S;
+type ShapeLiteral = (typeof SHAPES)[number];
+type MetalSheetLiteral = (typeof METAL_PROFILES)[number];
+type ShapeKey = Lowercase<ReplaceSpaces<ShapeLiteral>>;
+type MetalSheetKey = Lowercase<ReplaceSpaces<MetalSheetLiteral>>;
 const ROOF_LABELS: Record<RoofTypeKey, string> = {
   roman: "กระเบื้องลอนคู่ (Roman Tiles)",
   cpac: "กระเบื้องเซรามิคแบบลอนต่ำ (CPAC)",
@@ -71,6 +78,7 @@ const ROOF_LABELS: Record<RoofTypeKey, string> = {
   metalSheet: "เมทัลชีท (Metal Sheet)",
   other: "อื่นๆ",
 };
+const toKey = (s: string) => s.toLowerCase().replace(/[\s-]+/g, "_");
 
 const SLOPE_OPTIONS = [0, 10, 15, 20, 25, 30, 35, 40, 45];
 const WOOD = ["ไม้เต็ง", "ไม้แดง", "ไม่เบญจพรรณ", "ไม่ตะแบก"];
@@ -111,7 +119,7 @@ const defaultValues: StructureFormValues = {
   slopeDegree: [],
   shapes: SHAPES.reduce((acc, s) => ({ ...acc, [s]: false }), {} as any),
   metalProfiles: METAL_PROFILES.reduce(
-    (acc, m) => ({ ...acc, [m]: false }),
+    (acc, m) => ({ ...acc, [toKey(m)]: false }),
     {} as any
   ),
   pitch: 0,
@@ -119,10 +127,10 @@ const defaultValues: StructureFormValues = {
     wood: { checked: false, type: [], age: 0 },
     steel: { checked: false, type: [], age: 0 },
   },
-  span1: 0,
-  span2: 0,
-  baySpacing: 0,
-  lightOpening: 0,
+  purlin_purlin: 0,
+  rafter_rafter: 0,
+  pillar_pillar: 0,
+  skylight_purlin: 0,
   widthEave1: 0,
   widthEave2: 0,
   lightningProtector: false,
@@ -156,7 +164,6 @@ export default function StructureModal({
     setConfirmOpen(true);
   };
   const handleSubmitForm = (data: StructureFormValues) => {
-    console.log("handleSubmit", data);
     onSubmit(data);
     onClose();
     reset(defaultValues);
@@ -224,7 +231,7 @@ export default function StructureModal({
             <div>
               <label className={labelClasses}>ชื่ออาคาร</label>
               <input
-                {...register(`buildingName`)}
+                {...register(`buildingName`, { required: true })}
                 placeholder="ชื่ออาคาร"
                 className={inputClasses}
               />
@@ -319,26 +326,29 @@ export default function StructureModal({
             <section>
               <h3 className="font-medium mb-1">3.3 รูปทรงหลังคา</h3>
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-4 gap-x-8">
-                {SHAPES.map((s) => (
-                  <label
-                    key={s}
-                    className="flex items-center text-center space-x-1"
-                  >
-                    <input
-                      type="checkbox"
-                      {...register(`shapes.${s}` as const)}
-                      className="h-4 w-4"
-                    />
-                    <div className="flex flex-col w-full justify-center items-center">
-                      <img
-                        src={`/roof/${s}.png`}
-                        alt={s}
-                        className="w-14 h-14"
+                {SHAPES.map((s) => {
+                  const key = toKey(s) as ShapeKey;
+                  return (
+                    <label
+                      key={s}
+                      className="flex items-center text-center space-x-1"
+                    >
+                      <input
+                        type="checkbox"
+                        {...register(`shapes.${key}` as const)}
+                        className="h-4 w-4"
                       />
-                      <span>{s}</span>
-                    </div>
-                  </label>
-                ))}
+                      <div className="flex flex-col w-full justify-center items-center">
+                        <img
+                          src={`/roof/${s}.png`}
+                          alt={s}
+                          className="w-14 h-14"
+                        />
+                        <span>{s}</span>
+                      </div>
+                    </label>
+                  );
+                })}
               </div>
             </section>
 
@@ -346,22 +356,25 @@ export default function StructureModal({
             <section>
               <h3 className="font-medium mb-1">3.4 รูปแบบเมทัลชีท</h3>
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 gap-x-8">
-                {METAL_PROFILES.map((m) => (
-                  <label
-                    key={m}
-                    className="flex items-center text-center space-x-1"
-                  >
-                    <input
-                      type="checkbox"
-                      {...register(`metalProfiles.${m}` as const)}
-                      className="h-4 w-4"
-                    />
-                    <div className="flex flex-col w-full justify-center items-center">
-                      <img src={`/roof/${m}.png`} alt={m} className="" />
-                      <span>{m}</span>
-                    </div>
-                  </label>
-                ))}
+                {METAL_PROFILES.map((m) => {
+                  const key = toKey(m) as MetalSheetKey;
+                  return (
+                    <label
+                      key={m}
+                      className="flex items-center text-center space-x-1"
+                    >
+                      <input
+                        type="checkbox"
+                        {...register(`metalProfiles.${key}` as const)}
+                        className="h-4 w-4"
+                      />
+                      <div className="flex flex-col w-full justify-center items-center">
+                        <img src={`/roof/${m}.png`} alt={m} className="" />
+                        <span>{m}</span>
+                      </div>
+                    </label>
+                  );
+                })}
               </div>
             </section>
 
@@ -482,7 +495,7 @@ export default function StructureModal({
                 <label>3.7 ระยะแป–แป (ม.)</label>
                 <input
                   type="number"
-                  {...register("span1", { valueAsNumber: true })}
+                  {...register("purlin_purlin", { valueAsNumber: true })}
                   className="w-full border rounded px-2 py-1"
                 />
               </div>
@@ -490,7 +503,7 @@ export default function StructureModal({
                 <label>3.8 ระยะจันทัน–จันทัน (ม.)</label>
                 <input
                   type="number"
-                  {...register("span2", { valueAsNumber: true })}
+                  {...register("rafter_rafter", { valueAsNumber: true })}
                   className="w-full border rounded px-2 py-1"
                 />
               </div>
@@ -498,7 +511,7 @@ export default function StructureModal({
                 <label>3.9 ระยะเสา–เสา (ม.)</label>
                 <input
                   type="number"
-                  {...register("baySpacing", { valueAsNumber: true })}
+                  {...register("pillar_pillar", { valueAsNumber: true })}
                   className="w-full border rounded px-2 py-1"
                 />
               </div>
@@ -506,7 +519,7 @@ export default function StructureModal({
                 <label>3.10 ระยะช่องแสง–แป (ม.)</label>
                 <input
                   type="number"
-                  {...register("lightOpening", { valueAsNumber: true })}
+                  {...register("skylight_purlin", { valueAsNumber: true })}
                   className="w-full border rounded px-2 py-1"
                 />
               </div>

@@ -98,3 +98,125 @@ export type eventProps = {
   date: string;
   schoolData?: SchoolData;
 };
+
+export type survey = {
+  school_name: string;
+  location?: string;
+  gps?: string;
+  kwp?: number;
+  contact_name?: string;
+  contact_phone?: string;
+  surveyor?: string;
+  behavior?: surveyUserBehavior[];
+  roofplan?: boolean;
+  buildingplan?: boolean;
+  elecplan?: boolean;
+  monthlybill?: boolean;
+  loadprofile?: boolean;
+  buildings?: SurveyBuilding[];
+  survey?: string;
+  transformer?: surveyTransformer[];
+  cabinet?: surveyCabinet[];
+  rooftop_image?: string[];
+  bottom_view_image?: string[];
+  install_solar: surveySolarInstall[];
+  topview_image?: string[];
+  bottomview_image?: string[];
+};
+
+export type SurveyBuilding = {
+  /** Relationship ID to parent survey_building document */
+  survey: survey;
+  /** ชื่ออาคาร */
+  building_name?: string;
+
+  /** Roof Types */
+  roof_type_roman?: boolean;
+  roof_type_roman_age?: number;
+  roof_type_cpac?: boolean;
+  roof_type_cpac_age?: number;
+  roof_type_prestige?: boolean;
+  roof_type_prestige_age?: number;
+  roof_type_slab?: boolean;
+  roof_type_slab_age?: number;
+  roof_type_metalsheet?: boolean;
+  roof_type_metalsheet_age?: number;
+  roof_type_other?: boolean;
+  roof_type_other_age?: number;
+  roof_type_other_label?: string;
+
+  /** Area and slope */
+  area?: number;
+  slope_degree?: number[];
+
+  /** Roof Shapes */
+  shapes_open_gable?: boolean;
+  shapes_box_gable?: boolean;
+  shapes_hip?: boolean;
+  shapes_flat?: boolean;
+  shapes_dutch_gable?: boolean;
+  shapes_saltbox?: boolean;
+  shapes_dormer?: boolean;
+  shapes_shed?: boolean;
+  shapes_m_shaped?: boolean;
+  shapes_pyramid_hip?: boolean;
+  shapes_clerestory?: boolean;
+
+  /** Metal Sheet Types */
+  metalsheet_CR_700KL?: boolean;
+  metalsheet_CR_750BL?: boolean;
+  metalsheet_CR_750W?: boolean;
+  metalsheet_CR_600W?: boolean;
+  metalsheet_CR_650BL?: boolean;
+
+  /** Pitch */
+  pitch?: number;
+
+  /** Structure Types */
+  structure_wood?: boolean;
+  structure_wood_type?: string[];
+  structure_wood_age?: number;
+  structure_steel?: boolean;
+  structure_steel_type?: string[];
+  structure_steel_age?: number;
+
+  /** Structural Dimensions */
+  purlin_purlin?: number;
+  rafter_rafter?: number;
+  pillar_pillar?: number;
+  skylight_purlin?: number;
+  width_roof_one?: number;
+  width_roof_two?: number;
+
+  /** Additional Equipment */
+  lightning_protector?: boolean;
+  ladder?: boolean;
+  jack_roof?: boolean;
+  turbine?: boolean;
+
+  /** หมายเหตุเพิ่มเติม */
+  remark?: string;
+};
+
+export type surveyCabinet = {
+  type: string;
+  cabinet: string;
+  image?: string[];
+  survey: survey;
+};
+export type surveySolarInstall = {
+  name: string;
+  image?: File[];
+  survey: survey;
+};
+export type surveyUserBehavior = {
+  meter_type: string;
+  building: string;
+  average_electric: number;
+  survey: survey;
+};
+export type surveyTransformer = {
+  location: string;
+  meter: string;
+  survey: survey;
+};
