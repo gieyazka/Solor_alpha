@@ -1,6 +1,13 @@
 "use client";
 import React, { useEffect, useMemo, useState } from "react";
-import { ChevronDown, Eye, FileText, Trash2, BarChart3 } from "lucide-react";
+import {
+  ChevronDown,
+  Eye,
+  FileText,
+  Trash2,
+  BarChart3,
+  Edit,
+} from "lucide-react";
 import { useSchoolStore } from "@/stores";
 import {
   Autocomplete,
@@ -20,6 +27,7 @@ import { CustomAutoComplete, CustomSingleAutoComplete } from "./autocomplete";
 import FilterPopover from "./filterPopover";
 import { ops } from "@/utils/fn";
 import { useFilteredSchoolData } from "@/utils/hook";
+import { useRouter } from "next/navigation";
 
 type filterType = {
   province?: string[];
@@ -50,6 +58,8 @@ function Dashboard() {
     document: "",
     status: "",
   });
+
+  const router = useRouter();
   const masterData = useSchoolStore();
   const [page, setPage] = useState(1);
   const perPage = 10;
@@ -88,7 +98,6 @@ function Dashboard() {
     setPage(1);
   }, [schoolData]);
 
- 
   const handleRegionChange = (region: string[] | null | undefined) => {
     if (region) {
       setSelectedRegion(region);
@@ -409,7 +418,7 @@ function Dashboard() {
                           <div className="flex items-center">
                             <div>
                               {(
-                                parseFloat(String(item["รวมKW_PK"] ||0)) || 0
+                                parseFloat(String(item["รวมKW_PK"] || 0)) || 0
                               )?.toLocaleString()}
                             </div>
                           </div>
@@ -480,18 +489,21 @@ function Dashboard() {
                       <td className="py-2 px-6">
                         <div className="flex items-center justify-center space-x-2">
                           {/* Coming soon... */}
+                          <button
+                            className="p-2 text-yellow-600 hover:bg-orange-50 rounded-full transition-colors"
+                            title="แก้ไข"
+                            onClick={() => {
+                              router.replace(`/menu/form?school=${item.id}`);
+                            }}
+                          >
+                            <Edit className="w-6 h-6" />
+                          </button>
                           {/* <button
                             className="p-2 text-green-600 hover:bg-green-50 rounded-full transition-colors"
                             title="ดู"
                           >
                             <Eye className="w-4 h-4" />
                           </button>
-                          <button
-                            className="p-2 text-orange-600 hover:bg-orange-50 rounded-full transition-colors"
-                            title="แก้ไข"
-                          >
-                            <FileText className="w-4 h-4" />
-                          </button> */}
                           {/* <button
                             className="p-2 text-red-600 hover:bg-red-50 rounded-full transition-colors"
                             title="ลบ"

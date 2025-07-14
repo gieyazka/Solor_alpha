@@ -1,3 +1,5 @@
+import { Models } from "node-appwrite";
+
 export type Condition = ">" | ">=" | "<" | "<=" | "==" | "!=";
 
 export type SchoolData = {
@@ -89,6 +91,9 @@ export type SchoolData = {
   activityArrObject: { activity: string; date?: string }[];
 };
 
+
+export type AppwriteType<T> = Models.Document & T
+
 export type eventProps = {
   id?: number;
   team: string;
@@ -107,19 +112,19 @@ export type survey = {
   contact_name?: string;
   contact_phone?: string;
   surveyor?: string;
-  behavior?: surveyUserBehavior[];
+  behavior?: (Models.Document & surveyUserBehavior)[];
   roofplan?: boolean;
   buildingplan?: boolean;
   elecplan?: boolean;
   monthlybill?: boolean;
   loadprofile?: boolean;
-  buildings?: SurveyBuilding[];
+  building?: (Models.Document & SurveyBuilding)[];
   survey?: string;
-  transformer?: surveyTransformer[];
-  cabinet?: surveyCabinet[];
+  transformer?: (Models.Document & surveyTransformer)[];
+  cabinet?: AppwriteType<surveyCabinet>[];
   rooftop_image?: string[];
   bottom_view_image?: string[];
-  install_solar: surveySolarInstall[];
+  install_solar: AppwriteType<surveySolarInstall>[];
   topview_image?: string[];
   bottomview_image?: string[];
 };
@@ -206,7 +211,7 @@ export type surveyCabinet = {
 };
 export type surveySolarInstall = {
   name: string;
-  image?: File[];
+  image?: string[];
   survey: survey;
 };
 export type surveyUserBehavior = {

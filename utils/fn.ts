@@ -45,12 +45,3 @@ export const ops: Record<Condition, (a: number, b: number) => boolean> = {
 //   fileId: uploadedFile.data.$id!,
 // });
 
-export const formatUrlFile = ({
-  bucketId,
-  fileId,
-}: {
-  bucketId: string;
-  fileId: string;
-}) => {
-  return `${process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT}/storage/buckets/${bucketId}/files/${fileId}/view?project=${process.env.NEXT_PUBLIC_APPWRITE_PROJECT}`;
-};

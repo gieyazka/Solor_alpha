@@ -1,9 +1,10 @@
 import { useWatch, Control } from "react-hook-form";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import _ from "lodash";
 
 type WithPhotos = { photos?: File };
 
-type WithPhotosArray = { photos: File[] };
+type WithPhotosArray = { photos: File[]; imageId: [] };
 
 export function usePreviews<FormValues extends Record<string, any>>(
   control: Control<FormValues>,
@@ -38,27 +39,48 @@ export function usePreviews<FormValues extends Record<string, any>>(
 export function usePreviewsArr<FormValues extends Record<string, any>>(
   control: Control<FormValues>,
   fieldName: keyof FormValues
-): string[][] {
-  // subscribe deep changes ในแต่ละ item.photos (ซึ่งเป็น File[])
+): Array<{ photos: string[]; imageId?: string[] }> {
+  // อ่านค่าล่าสุดจาก form
   const items = useWatch({
     control,
     name: fieldName as any,
     defaultValue: [] as any,
   }) as WithPhotosArray[];
 
-  // สร้าง URL ใหม่เป็น nested array [ [url1, url2], [url1], … ]
-  const previews = useMemo(() => {
-    return items.map(
-      (item) => item.photos?.map((f) => URL.createObjectURL(f)) ?? []
-    );
-  }, [items]);
+  // สร้าง preview URLs ขึ้นมาใหม่เมื่อ items เปลี่ยน
+  const previews = useMemo(
+    () =>
+      items.map((item) => ({
+        photos: item.photos?.map((f) => URL.createObjectURL(f)) ?? [],
+        imageId: item.imageId ?? [],
+      })),
+    [items]
+  );
 
-  // cleanup เมื่อ unmount หรือ items เปลี่ยน
+  // เก็บ URL ชุดก่อนหน้า เพื่อ revoke ทิ้งก่อนสร้างใหม่
+  const previousUrlsRef = useRef<string[]>([]);
+
+  useEffect(() => {
+    // แบนด์ลิงก์ URL ของ previews ปัจจุบัน
+    const currentUrls = previews.flatMap((p) => p.photos);
+
+    // revoke URL ของเดิมก่อน
+    previousUrlsRef.current.forEach((url) => {
+      URL.revokeObjectURL(url);
+    });
+
+    // อัปเดต ref ให้เก็บชุดล่าสุด
+    previousUrlsRef.current = currentUrls;
+  }, [previews]);
+
+  // คืนค่า cleanup สุดท้ายตอน unmount
   useEffect(() => {
     return () => {
-      previews.flat().forEach((u) => u && URL.revokeObjectURL(u));
+      previousUrlsRef.current.forEach((url) => {
+        URL.revokeObjectURL(url);
+      });
     };
-  }, [previews]);
+  }, []);
 
   return previews;
 }
@@ -71,16 +93,27 @@ export function usePreviewsSimple<FormValues extends Record<string, any>>(
     control,
     name: fieldName as any,
     defaultValue: [] as any,
-  }) as File[];
+  }) as File[] | string[];
 
   const previews = useMemo(
-    () => files.map((f) => URL.createObjectURL(f)),
+    () =>
+      files.map((f) => {
+        if (_.isString(f)) {
+          return f;
+        } else {
+          return URL.createObjectURL(f);
+        }
+      }),
     [files]
   );
 
   useEffect(() => {
     return () => {
-      previews.forEach((u) => u && URL.revokeObjectURL(u));
+      previews.forEach((u) => {
+        if (u && !_.isString(u)) {
+          URL.revokeObjectURL(u);
+        }
+      });
     };
   }, [previews]);
 

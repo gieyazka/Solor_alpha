@@ -25,8 +25,8 @@ import dayjs from "dayjs";
 import "dayjs/locale/th";
 import { useSchoolStore } from "@/stores/index";
 import { SchoolData } from "@/@type";
-import { usePathname, useRouter } from "next/navigation";
-import _ from "lodash";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import _, { set } from "lodash";
 import {
   CalendarMonth,
   Description,
@@ -51,6 +51,7 @@ export default function ClientLayoutWrapper({
   const [activeTab, setActiveTab] = useState(pathname);
   const [isMobile, setIsMobile] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
   useEffect(() => {
     const checkScreenSize = () => {
       setIsMobile(window.innerWidth < 768);
@@ -66,8 +67,13 @@ export default function ClientLayoutWrapper({
   }, []);
 
   useEffect(() => {
-    router.replace(activeTab);
-  }, [activeTab]);
+    const qs = searchParams.toString(); // ex: "school=12"
+    const url = qs ? `${pathname}?${qs}` : pathname;
+    setActiveTab(pathname.split("/").pop() || activeTab);
+    console.log("pathname", pathname);
+    console.log("url", url);
+    router.replace(url);
+  }, [searchParams, pathname, router]);
 
   useEffect(() => {
     if (initialData) {
@@ -166,6 +172,7 @@ export default function ClientLayoutWrapper({
                     key={item.id}
                     onClick={() => {
                       setActiveTab(item.id);
+                      router.replace(`/menu/${item.id}`);
                       if (isMobile) setSidebarOpen(false);
                     }}
                     className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${

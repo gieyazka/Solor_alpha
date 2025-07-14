@@ -1,0 +1,14 @@
+# docker-compose.yml
+version: '3.8'
+
+services:
+  solar-project-followup:
+    pull_policy: "always"
+    image: pokkate/solar-follow:latest
+    # env_file:
+      # - .env.production
+    # environment:
+      # - NODE_ENV=production
+    ports:
+      - "8080:8080"
+    restart: unless-stopped

@@ -322,7 +322,7 @@ export default function StructureModal({
               </div>
             </section>
 
-            {/* 3.3 Roof Shapes */}
+            {/* 3.3 Roof   */}
             <section>
               <h3 className="font-medium mb-1">3.3 รูปทรงหลังคา</h3>
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-4 gap-x-8">
@@ -358,6 +358,8 @@ export default function StructureModal({
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 gap-x-8">
                 {METAL_PROFILES.map((m) => {
                   const key = toKey(m) as MetalSheetKey;
+                  console.log(key);
+
                   return (
                     <label
                       key={m}
@@ -379,14 +381,14 @@ export default function StructureModal({
             </section>
 
             {/* 3.5 Pitch */}
-            <section className="flex-1">
+            {/* <section className="flex-1">
               <label className="block mb-1">3.5 ความชันหลังคา (องศา)</label>
               <input
                 type="number"
                 {...register("pitch", { valueAsNumber: true })}
                 className="w-full border rounded px-2 py-1"
               />
-            </section>
+            </section> */}
 
             {/* 3.6 Structure */}
             <section>

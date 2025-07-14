@@ -21,7 +21,6 @@ import {
   Watch,
   Map,
 } from "lucide-react";
-import AsynSchoolAutoComplete from "@/components/event/school-autocomplete";
 import { useSchoolStore } from "@/stores";
 import { SchoolData } from "@/@type";
 import { Autocomplete, Button, IconButton, TextField } from "@mui/material";
@@ -52,13 +51,14 @@ import { columnToLetter } from "@/utils/excel";
 import { updateMasterData } from "@/actions/excel";
 import { formatNumber, parseNumber, toThaiNumber } from "@/utils/fn";
 import { inputClasses, labelClasses, sectionClasses } from "@/utils/style";
+import { usePathname, useSearchParams } from "next/navigation";
 export default function SolarCellForm() {
   const masterStore = useSchoolStore();
   const [hidden, setHidden] = useState(true);
+  const pathname = usePathname();
 
   useEffect(() => {
     const target = document.getElementById("topForm");
-    console.log("target", target);
     if (!target) return;
 
     const observer = new IntersectionObserver(
@@ -177,6 +177,7 @@ export default function SolarCellForm() {
   });
 
   const handleChangeSchool = (data: SchoolData[] | undefined) => {
+    clearQuery();
     const d = data?.[0];
     if (d && d.ชื่อโรงเรียน) {
       if (d?.activityArr) {
@@ -240,7 +241,6 @@ export default function SolarCellForm() {
           date?: string;
         }[] = [];
         findSchoolByKey.forEach((school) => {
-          console.log("school", school.Status);
           statusData.push({
             status: String(school.Status),
             date: "",
@@ -301,6 +301,32 @@ export default function SolarCellForm() {
     setValue("รวมKW_PK", String(isNaN(sum) ? "" : sum));
   }, [meterValues]);
 
+  const params = useSearchParams();
+  const school = params.get("school") || undefined;
+
+  useEffect(() => {
+    if (school) {
+      const findSchoolById = masterStore.masterData.find(
+        (d) => d.id.toString() === school
+      );
+      if (findSchoolById?.["ชื่อโรงเรียน"]) {
+        handleChangeSchool(
+          masterStore.masterDataKey[findSchoolById["ชื่อโรงเรียน"]]
+        );
+      }
+    }
+  }, [school, masterStore.masterData]);
+
+  const clearQuery = () => {
+    // เปลี่ยน URL เท่านั้น ไม่ reload หรือ redirect ใดๆ
+    window.history.replaceState(
+      null,
+      "",
+      // เอาเฉพาะ path ไม่มี ?query
+      pathname
+    );
+  };
+
   const watchedValues = watch([
     "ความเข้าใจในโมเดล ESCO (10%)",
     "การตัดสินใจและอำนาจภายใน (10%)",
@@ -358,7 +384,9 @@ export default function SolarCellForm() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 <div>
                   <label className={labelClasses}>ชื่อโรงเรียน</label>
-                  <ScoolAutoComplete
+                  <SchoolAutoComplete
+                    value={watch("ชื่อโรงเรียน")}
+                    readOnly={false}
                     masterDataKey={masterStore.masterDataKey}
                     handleChangeSchool={handleChangeSchool}
                   />
@@ -1545,11 +1573,13 @@ export default function SolarCellForm() {
   );
 }
 
-export const ScoolAutoComplete = (props: {
+export const SchoolAutoComplete = (props: {
+  readOnly: boolean;
+  value: any;
   masterDataKey: Record<string, SchoolData[]>;
   handleChangeSchool: (d: SchoolData[] | undefined) => void;
 }) => {
-  const { masterDataKey } = props;
+  const { masterDataKey, readOnly = false } = props;
   const [open, setOpen] = React.useState(false);
   const [inputValue, setInputValue] = React.useState("");
 
@@ -1581,6 +1611,7 @@ export const ScoolAutoComplete = (props: {
   // });
   return (
     <Autocomplete
+      readOnly={readOnly}
       freeSolo
       // sx={{ width: 300 }}
       open={open}
@@ -1612,6 +1643,7 @@ export const ScoolAutoComplete = (props: {
           ? (option as SchoolData)["ชื่อโรงเรียน"]
           : String(option)
       }
+      value={props.value ?? ""}
       options={optionScool ?? []}
       // loading={schoolQuery.isFetching}
       renderInput={(params) => (

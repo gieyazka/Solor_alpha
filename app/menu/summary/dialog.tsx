@@ -18,6 +18,8 @@ import {
 import SearchIcon from "@mui/icons-material/Search";
 import SchoolIcon from "@mui/icons-material/School";
 import { useSchoolStore } from "@/stores";
+import { Edit } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface FancySchoolDialogProps {
   open: boolean;
@@ -33,7 +35,8 @@ const FancySchoolDialog: React.FC<FancySchoolDialogProps> = ({
   onClose,
   onSelect,
 }) => {
-    const masterData = useSchoolStore();
+  const router = useRouter();
+  const masterData = useSchoolStore();
   const [search, setSearch] = useState("");
   const filtered = useMemo(
     () =>
@@ -83,11 +86,13 @@ const FancySchoolDialog: React.FC<FancySchoolDialogProps> = ({
 
         <List sx={{ maxHeight: 300, overflowY: "auto", pr: 1 }}>
           {filtered.map((school) => (
-            <ListItemButton
+            <Box
               key={school}
-            //   selected={selectedSchool === school}
-            //   onClick={() => onSelect(school)}
+              //   selected={selectedSchool === school}
+              //   onClick={() => onSelect(school)}
               sx={{
+                display: "flex",
+                alignItems: "center",
                 borderRadius: 1,
                 mb: 1,
                 transition: "background-color 0.2s",
@@ -104,12 +109,26 @@ const FancySchoolDialog: React.FC<FancySchoolDialogProps> = ({
                   <SchoolIcon />
                 </Avatar>
               </ListItemAvatar>
-              <ListItemText
-                primary={school}
-                primaryTypographyProps={{ variant: "body1" }}
-                secondary={masterData.masterDataKey[school]['0'].ชื่อจังหวัด}
-              />
-            </ListItemButton>
+              <div className="flex justify-between flex-1">
+                <ListItemText
+                  primary={school}
+                  primaryTypographyProps={{ variant: "body1" }}
+                  secondary={masterData.masterDataKey[school]["0"].ชื่อจังหวัด}
+                />
+                <button
+                  className="p-2 text-yellow-600 hover:bg-orange-50 rounded-full transition-colors"
+                  title="แก้ไข"
+                  onClick={() => {
+                    const schoolData = masterData.masterDataKey[school];
+                    if (schoolData) {
+                      router.replace(`/menu/form?school=${schoolData["0"].id}`);
+                    }
+                  }}
+                >
+                  <Edit className="w-6 h-6" />
+                </button>
+              </div>
+            </Box>
           ))}
 
           {filtered.length === 0 && (

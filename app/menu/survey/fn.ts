@@ -1,4 +1,4 @@
-import { SurveyBuilding } from "@/@type";
+import { AppwriteType, SurveyBuilding } from "@/@type";
 import { createClientAppwrite } from "@/utils/appwrite_client";
 import { ID } from "appwrite";
 import pMap from "p-map";
@@ -65,7 +65,7 @@ export const formatCabinet = async (data: {
 export const formatSolarCellInstall = async (data: {
   solarCellBuiling: {
     name: string;
-    photos: File[];
+    photos?: File[];
   }[];
 }) => {
   const solarCabinets = data.solarCellBuiling
@@ -214,4 +214,102 @@ export const formatBottomViewImage = async (image: File[] | undefined) => {
     return uploaded.$id;
   });
   return uploaded || [];
+};
+
+export const datatoFormBuliding = (
+  building: AppwriteType<SurveyBuilding>[] | undefined
+) => {
+  try {
+    const formatBuildingData: StructureFormValues[] = building
+      ? building.map((d) => ({
+          docId: d.$id,
+          buildingName: d.building_name || "",
+          roofTypes: {
+            roman: {
+              checked: !!d.roof_type_roman,
+              age: d.roof_type_roman_age ?? 0,
+            },
+            cpac: {
+              checked: !!d.roof_type_cpac,
+              age: d.roof_type_cpac_age ?? 0,
+            },
+            prestige: {
+              checked: !!d.roof_type_prestige,
+              age: d.roof_type_prestige_age ?? 0,
+            },
+            slab: {
+              checked: !!d.roof_type_slab,
+              age: d.roof_type_slab_age ?? 0,
+            },
+            metalSheet: {
+              checked: !!d.roof_type_metalsheet,
+              age: d.roof_type_metalsheet_age ?? 0,
+            },
+            other: {
+              checked: !!d.roof_type_other,
+              age: d.roof_type_other_age ?? 0,
+              otherLabel: d.roof_type_other_label ?? "",
+            },
+          },
+          area: d.area ?? 0,
+          slopeDegree: d.slopeDegree || [],
+
+          shapes: {
+            open_gable: d.shapes_open_gable || false,
+            box_gable: d.shapes_box_gable || false,
+            hip: d.shapes_hip || false,
+            flat: d.shapes_flat || false,
+            dutch_gable: d.shapes_dutch_gable || false,
+            saltbox: d.shapes_saltbox || false,
+            dormer: d.shapes_dormer || false,
+            shed: d.shapes_shed || false,
+            m_shaped: d.shapes_m_shaped || false,
+            pyramid_hip: d.shapes_pyramid_hip || false,
+            clerestory: d.shapes_clerestory || false,
+          },
+
+          metalProfiles: {
+            cr_700kl: d.metalsheet_CR_700KL || false,
+            cr_750bl: d.metalsheet_CR_750BL || false,
+            cr_750w: d.metalsheet_CR_750W || false,
+            cr_600w: d.metalsheet_CR_600W || false,
+            cr_650bl: d.metalsheet_CR_650BL || false,
+          },
+          pitch: d.pitch || 0,
+          structure: {
+            wood: {
+              checked: d.structure_wood || false,
+              type: d.structure_wood_type || [],
+              age: d.structure_wood_age || 0,
+            },
+            steel: {
+              checked: d.structure_steel || false,
+              type: d.structure_steel_type || [],
+              age: d.structure_steel_age || 0,
+            },
+          },
+          purlin_purlin: d.purlin_purlin || 0,
+          rafter_rafter: d.rafter_rafter || 0,
+          pillar_pillar: d.pillar_pillar || 0,
+          skylight_purlin: d.skylight_purlin || 0,
+          widthEave1: d.width_roof_one || 0,
+          widthEave2: d.width_roof_two || 0,
+          lightningProtector: d.lightning_protector || false,
+          ladder: d.ladder || false,
+          jackRoof: d.jackRoof || false,
+          turbine: d.turbine || false,
+          otherNotes: d.remark || "",
+        }))
+      : [];
+    return formatBuildingData;
+  } catch (error) {
+    console.error(error);
+    return [];
+  }
+};
+
+export const formatUrlImage = (imageId: string[]) => {
+  return imageId.map((d) => {
+    return `${process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT}/storage/buckets/${process.env.NEXT_PUBLIC_BUCKET_SOLAR}/files/${d}/view?project=${process.env.NEXT_PUBLIC_APPWRITE_PROJECT}&mode=admin`;
+  });
 };

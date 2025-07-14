@@ -2,6 +2,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { getSchools, getSchoolsPagination } from "./school";
 import { getEventByDate } from "./event";
+import { getSurvey,  } from "./survey";
 
 export const useSchoolQuery = (props: { schoolName?: string }) => {
   const { schoolName } = props;
@@ -31,6 +32,13 @@ export const useEventQuery = (props: { startDate: Date; endDate: Date }) => {
   });
 };
 
-
-
-
+export const useSurveyQuery = (props: {
+  page: number;
+  size: number;
+}) => {
+  const { page, size } = props;
+  return useQuery({
+    queryKey: ["survey", page, size],
+    queryFn: () => getSurvey({ page, size }),
+  });
+};

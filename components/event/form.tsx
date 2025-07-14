@@ -34,7 +34,7 @@ import { SchoolData } from "@/@type";
 import { writeToSheet } from "@/actions/excel";
 import { useRouter } from "next/navigation";
 import { useSchoolStore } from "@/stores";
-import { ScoolAutoComplete } from "@/app/menu/form/page";
+import { SchoolAutoComplete } from "@/app/menu/form/page";
 
 export default function EventForm(props: {
   keyMaster: { [k: string]: SchoolData };
@@ -222,7 +222,9 @@ export default function EventForm(props: {
               </IconButton>
             </div>
             <Stack spacing={3}>
-              <ScoolAutoComplete
+              <SchoolAutoComplete
+                readOnly={false}
+                value={schoolData?.["ชื่อโรงเรียน"] || ""}
                 masterDataKey={masterStore.masterDataKey}
                 handleChangeSchool={handleChangeSchool}
               />
