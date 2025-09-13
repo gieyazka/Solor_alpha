@@ -3,16 +3,19 @@
 import dayjs from "@/utils/dayjs";
 import RenderCalendar from "./calendar";
 import { useState } from "react";
-import { useEventQuery } from "@/actions/useQuery";
 import { Box, Button, Modal, Typography } from "@mui/material";
 import EventForm from "./form";
-import { getEventByDate } from "@/actions/event";
 import { useQueryClient } from "@tanstack/react-query";
-import { eventProps, SchoolData } from "@/@type";
+import { AppwriteType, calendarProps, eventProps, SchoolData } from "@/@type";
 import { Event } from "react-big-calendar";
 import { useSchoolStore } from "@/stores";
+import Swal from "sweetalert2";
+import { useRouter } from "next/navigation";
+import { deleteCalendar } from "@/actions/calendar";
+import EditEventForm from "./form_edit";
 
-export const RenderEvent = (props: { eventData: eventProps[] }) => {
+export const RenderEvent = (props: { eventData: calendarProps[] }) => {
+  const router = useRouter();
   const { eventData } = props;
   const schollStore = useSchoolStore();
   const masterData = schollStore.masterData;
@@ -35,6 +38,10 @@ export const RenderEvent = (props: { eventData: eventProps[] }) => {
   const [eventForm, setEventForm] = useState<{
     open: boolean;
   }>({ open: false });
+  const [editEvent, setEditEvent] = useState<{
+    open: boolean;
+    data?: eventProps;
+  }>({ open: false, data: undefined });
 
   const handleOpenEventModal = (eventData: eventProps) => {
     setEventModal({ open: true, data: eventData });
@@ -50,13 +57,13 @@ export const RenderEvent = (props: { eventData: eventProps[] }) => {
     ?.map((d) => {
       const schoolData = keyMaster?.[d.school_id?.toString()];
       return {
-        title: schoolData?.["ชื่อโรงเรียน"],
+        title: schoolData?.["school_name"],
         start: dayjs(d.date).toDate(), // 10 มิ.ย. 2025 10:00
         end: dayjs(d.date).toDate(), // 10 มิ.ย. 2025 11:00
         allDay: false,
         resource: { ...d, schoolData },
         color: "red", // ฟิลด์กำหนดสีเอง
-        id: d.id,
+        // id: d.id,
       };
     })
     .filter((d) => d?.title !== undefined);
@@ -82,13 +89,55 @@ export const RenderEvent = (props: { eventData: eventProps[] }) => {
       open: false,
     });
   };
-
+  const handleOpenEditEvent = (eventData: eventProps) => {
+    setEditEvent({ open: true, data: eventData });
+  };
+  const onCloseEditForm = () => {
+    setEditEvent({
+      open: false,
+    });
+  };
+  const handleDeleteCalendar = async (docId: string) => {
+    Swal.fire({
+      title: "Do you want to delete the event?",
+      showDenyButton: true,
+      // showCancelButton: true,
+      confirmButtonText: "Confirm",
+      reverseButtons: true,
+      denyButtonText: `Cancel`,
+    }).then(async (result) => {
+      /* Read more about isConfirmed, isDenied below */
+      if (result.isConfirmed) {
+        try {
+          await deleteCalendar(docId);
+          router.refresh();
+          Swal.fire("Saved!", "", "success");
+        } catch (error) {
+          console.error("Error deleting calendar:", error);
+          Swal.fire("Error deleting calendar", "", "error");
+        }
+      } else if (result.isDenied) {
+        // Swal.fire("Changes are not saved", "", "info");
+      }
+    });
+  };
   return (
     <div className="flex flex-col flex-1  h-screen  ">
       <ModalDetail
+        handleOpenEditEvent={handleOpenEditEvent}
+        handleDeleteCalendar={handleDeleteCalendar}
         handleClose={handleCloseEventModal}
         open={eventModal.open}
         data={eventModal.data}
+      />
+      <EditEventForm
+        data={editEvent.data}
+        keyMaster={keyMaster}
+        masterData={masterData}
+        refetchEvent={refetchEvent}
+        handleClose={onCloseEditForm}
+        handleCloseEventModal={handleCloseEventModal}
+        open={editEvent.open}
       />
       <EventForm
         keyMaster={keyMaster}
@@ -116,9 +165,12 @@ const ModalDetail = (props: {
   open: boolean;
   data?: eventProps;
   handleClose: () => void;
+  handleDeleteCalendar: (id: string) => void;
+  handleOpenEditEvent: (data: eventProps) => void;
 }) => {
-  const { data } = props;
+  const { data, handleDeleteCalendar, handleOpenEditEvent } = props;
   const schoolData = data?.schoolData;
+
   return (
     <Modal open={props.open} onClose={props.handleClose}>
       <Box
@@ -148,22 +200,20 @@ const ModalDetail = (props: {
           gutterBottom
           color="text.primary"
         >
-          📍 {schoolData?.["ชื่อโรงเรียน"]}
+          📍 {schoolData?.["school_name"]}
         </Typography>
 
         <Box sx={{ mb: 2 }}>
           <Typography variant="body1" color="text.secondary">
-            ผู้ประสานงาน:{" "}
-            <strong>{schoolData?.["ชื่อผู้ประสานงานโรงเรียน"]}</strong> (
-            {schoolData?.["ตำแหน่ง"]})
+            ผู้ประสานงาน: <strong>{schoolData?.["school_contact_name"]}</strong>{" "}
+            ({schoolData?.["school_contact_position"]})
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            เบอร์โทร: <strong>{schoolData?.["เบอร์ติดต่อผู้ประสานงาน"]}</strong>
+            เบอร์โทร: <strong>{schoolData?.["school_contact_phone"]}</strong>
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            ผู้อำนวยการ:{" "}
-            <strong>{schoolData?.["ชื่อผู้อำนวยการโรงเรียน"]}</strong> (
-            {schoolData?.["เบอร์ติดต่อ ผอ."]})
+            ผู้อำนวยการ: <strong>{schoolData?.["school_director"]}</strong> (
+            {schoolData?.["school_director_phone"]})
           </Typography>
         </Box>
 
@@ -190,6 +240,29 @@ const ModalDetail = (props: {
             </Typography>
           )}
         </Box>
+
+        <div className="flex gap-4 mt-4 w-full">
+          <Button
+            onClick={() => {
+              handleDeleteCalendar(data!.$id);
+            }}
+            className="flex-1 w-full"
+            variant="contained"
+            color="error"
+          >
+            ลบ
+          </Button>
+          <Button
+            onClick={() => {
+              handleOpenEditEvent(data!);
+            }}
+            className="flex-1 w-full"
+            variant="contained"
+            color="primary"
+          >
+            แก้ไข
+          </Button>
+        </div>
       </Box>
     </Modal>
   );

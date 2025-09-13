@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Box,
   Button,
@@ -28,14 +28,16 @@ import { writeToSheet } from "@/actions/excel";
 import { useRouter } from "next/navigation";
 import { useSchoolStore } from "@/stores";
 import { SchoolAutoComplete } from "@/app/menu/form/page";
-import { createCalendar } from "@/actions/calendar";
+import { createCalendar, updateCalendar } from "@/actions/calendar";
+import Swal from "sweetalert2";
 
-export default function EventForm(props: {
+export default function EditEventForm(props: {
   keyMaster: { [k: string]: SchoolProps };
-
+  data?: eventProps;
   refetchEvent: () => void;
   open: boolean;
   handleClose: () => void;
+  handleCloseEventModal: () => void;
   masterData: SchoolProps[];
 }) {
   const router = useRouter();
@@ -67,48 +69,65 @@ export default function EventForm(props: {
       });
       return;
     }
-    try {
-      const res = await createCalendar({
-        school_id: schoolData.id,
-        date: dayjs(start).toDate(),
-        team: team,
-        title,
-        description,
-      });
-      const event: Partial<eventProps> = {
-        school_id: schoolData.id,
-        date: dayjs(start).toDate(),
-        team: team,
-        title,
-        description,
-        schoolData: schoolData,
-      };
 
-      await sendMessageToLine(event);
-      router.refresh();
-      // props.refetchEvent();
-      onClose();
-      setSnackbarState({
-        type: "success",
-        open: true,
-        remark: "Create Event success",
-      });
-    } catch (error) {
-      console.log("error", error);
-      setSnackbarState({
-        type: "error",
-        open: true,
-        remark: JSON.stringify(error),
-      });
-    }
+    Swal.fire({
+      title: "Do you want to edit the event?",
+      showDenyButton: true,
+      // showCancelButton: true,
+      confirmButtonText: "Confirm",
+      reverseButtons: true,
+      denyButtonText: `Cancel`,
+    }).then(async (result) => {
+      /* Read more about isConfirmed, isDenied below */
+      if (result.isConfirmed) {
+        try {
+          const res = await updateCalendar({
+            id: props.data!.$id,
+            data: {
+              school_id: schoolData.id,
+              date: dayjs(start).toDate(),
+              team: team,
+              title,
+              description,
+            },
+          });
+          const event: Partial<eventProps> = {
+            school_id: schoolData.id,
+            date: dayjs(start).toDate(),
+            team: team,
+            title,
+            description,
+            schoolData: schoolData,
+          };
+
+          await sendMessageToLine(event);
+          router.refresh();
+          // props.refetchEvent();
+          onClose();
+          setSnackbarState({
+            type: "success",
+            open: true,
+            remark: "Edit Event success",
+          });
+          props.handleCloseEventModal();
+        } catch (error) {
+          console.log("error", error);
+          setSnackbarState({
+            type: "error",
+            open: true,
+            remark: JSON.stringify(error),
+          });
+        }
+      } else if (result.isDenied) {
+        // Swal.fire("Changes are not saved", "", "info");
+      }
+    });
   };
 
-  const handleChangeSchool = (
-    data: AppwriteType<SchoolProps>[] | undefined
-  ) => {
+  const handleChangeSchool = (data: SchoolProps[] | undefined) => {
     const d = data?.[0];
     if (d && d["school_name"]) {
-      setSchoolData(d);
+      setSchoolData(d as AppwriteType<SchoolProps>);
     }
   };
   const statusOptions = [
@@ -142,6 +161,22 @@ export default function EventForm(props: {
     setSchoolData(undefined);
     props.handleClose();
   };
+
+  useEffect(() => {
+    if (props.open && props.data) {
+      setSchoolData(props.data?.schoolData);
+      setTitle(props.data?.title!);
+      setTeam(props.data?.team!);
+      setDescription(props.data?.description!);
+      setStart(dayjs(props.data!.date!).format("YYYY-MM-DDTHH:mm"));
+    } else {
+      setSchoolData(undefined);
+      setTitle("");
+      setTeam("");
+      setDescription("");
+      setStart("");
+    }
+  }, [props.open, props.data]);
 
   return (
     <div className="">
@@ -211,7 +246,7 @@ export default function EventForm(props: {
           >
             <div className="flex justify-between items-center mb-2">
               <Typography variant="h5" fontWeight="bold" gutterBottom>
-                Create event
+                Edit event
               </Typography>
 
               <IconButton onClick={onClose} aria-label="close">
@@ -287,7 +322,10 @@ export default function EventForm(props: {
                 label="Date"
                 type="datetime-local"
                 value={start}
-                onChange={(e) => setStart(e.target.value)}
+                onChange={(e) => {
+                  console.log("e", e.target.value);
+                  setStart(e.target.value);
+                }}
                 InputLabelProps={{ shrink: true }}
                 required
                 fullWidth

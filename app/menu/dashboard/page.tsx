@@ -1,42 +1,33 @@
 "use client";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   ChevronDown,
-  Eye,
-  FileText,
-  Trash2,
-  BarChart3,
-  Edit,
+  Zap,
+  GraduationCap,
+  MapPin,
+  Building,
+  Battery,
 } from "lucide-react";
-import { useSchoolStore } from "@/stores";
-import {
-  Autocomplete,
-  Box,
-  List,
-  ListItem,
-  ListItemText,
-  Pagination,
-  TextField,
-  Tooltip,
-  Typography,
-} from "@mui/material";
-import { Condition, SchoolData } from "@/@type";
-import clsx from "clsx";
-import _ from "lodash";
-import { CustomAutoComplete, CustomSingleAutoComplete } from "./autocomplete";
-import FilterPopover from "./filterPopover";
-import { ops } from "@/utils/fn";
 import { useFilteredSchoolData } from "@/utils/hook";
-import { useRouter } from "next/navigation";
-
-type filterType = {
-  province?: string[];
-  school?: string[];
-  sector?: string[];
-  section?: string[];
-  area?: string[];
-};
-
+import { useSchoolStore } from "@/stores";
+import { activityOption } from "@/utils/options";
+import FilterPopover from "../status/filterPopover";
+import {
+  CustomAutoComplete,
+  CustomSingleAutoComplete,
+} from "../status/autocomplete";
+import _ from "lodash";
+import { StatusCard } from "./status";
+import FancySchoolDialog from "./dialog";
+import { Unstable_PickersSectionList } from "@mui/x-date-pickers";
+import { useSchoolCascades } from "../status/filter";
+const REGIONS = [
+  "เหนือ",
+  "กลาง",
+  "ตะวันออก",
+  "ตะวันออกเฉียงเหนือ",
+  "ตะวันตก",
+] as const;
 const statusOption = [
   "สนใจนำเสนอโครงการ",
   "ตอบรับเข้าร่วมโครงการ",
@@ -48,23 +39,105 @@ const statusOption = [
   "ไม่สนใจ",
   "ยกเลิก",
 ];
+interface StatCardProps {
+  value: string;
+  label: string;
+  icon: React.ReactNode;
+  bgColor: string;
+  textColor?: string;
+}
 
-const collator = new Intl.Collator("th", { sensitivity: "base" });
-function Dashboard() {
-  const [filters, setFilters] = useState({
-    school: "",
-    district: "",
-    province: "",
-    document: "",
-    status: "",
-  });
+interface CircularProgressProps {
+  current: number;
+  total: number;
+  label: string;
+  size?: "sm" | "md";
+}
 
-  const router = useRouter();
+const StatCard: React.FC<StatCardProps> = ({
+  value,
+  label,
+  icon,
+  bgColor,
+  textColor = "text-white",
+}) => (
+  <div className={`${bgColor} ${textColor} p-4 rounded-xl shadow-lg`}>
+    <div className="flex items-center justify-between">
+      <div>
+        <div className="text-2xl font-bold">{value}</div>
+        <div className="text-sm opacity-90">{label}</div>
+      </div>
+      <div className="text-3xl opacity-80">{icon}</div>
+    </div>
+  </div>
+);
+
+const CircularProgress: React.FC<CircularProgressProps> = ({
+  current,
+  total,
+  label,
+  size = "md",
+}) => {
   const masterData = useSchoolStore();
-  const [page, setPage] = useState(1);
-  const perPage = 10;
-  // const [schoolData, setSchoolData] = useState(masterData.masterDataKey);
 
+  const percentage = (current / total) * 100;
+  const radius = size === "sm" ? 30 : 40;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (percentage / 100) * circumference;
+
+  return (
+    <div className="flex flex-col items-center bg-white p-4 rounded-xl shadow-lg">
+      <div className="relative">
+        <svg
+          width={size === "sm" ? 160 : 200}
+          height={size === "sm" ? 160 : 200}
+          className="transform -rotate-90"
+        >
+          <circle
+            cx={size === "sm" ? 80 : 100}
+            cy={size === "sm" ? 80 : 100}
+            r={radius}
+            stroke="#f3f4f6"
+            strokeWidth="8"
+            fill="none"
+          />
+          <circle
+            cx={size === "sm" ? 80 : 50}
+            cy={size === "sm" ? 80 : 50}
+            r={radius}
+            stroke="#10b981"
+            strokeWidth="8"
+            fill="none"
+            strokeDasharray={circumference}
+            strokeDashoffset={strokeDashoffset}
+            strokeLinecap="round"
+            className="transition-all duration-300"
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-lg font-bold text-green-600">{current}</span>
+          <span className="text-xs text-gray-500">
+            {percentage.toFixed(2)}%
+          </span>
+        </div>
+      </div>
+      <div className="text-xs text-center text-gray-600 mt-2 max-w-20">
+        {label}
+      </div>
+    </div>
+  );
+};
+
+const Dashboard: React.FC = () => {
+  const masterData = useSchoolStore();
+  const [dailogState, setDialogState] = useState<{
+    open: boolean;
+    data?: string[];
+  }>({
+    data: undefined,
+    open: false,
+  });
+  const [selected, setSelected] = useState<string | undefined>(undefined);
   const [selectedRegion, setSelectedRegion] = useState<string[]>([]);
   const [selectedDepartment, setSelectedDepartment] = useState<string[]>([]);
   const [selectedProvince, setSelectedProvince] = useState<string[]>([]);
@@ -89,729 +162,390 @@ function Dashboard() {
     selectedArea,
     selectedSchool,
     selectedStatus: selectedStatus,
-    statusOption,
+    statusOption: statusOption,
     eletricFilter,
   });
 
-  // reset page ทุกครั้งที่ filtered result เปลี่ยน
-  useEffect(() => {
-    setPage(1);
-  }, [schoolData]);
+  const onOpen = (data: string[]) => {
+    setDialogState({ data, open: true });
+  };
 
+  const summaryData = useMemo(() => {
+    const provincesSet = new Set<string>();
+
+    const statusCounts: Record<string, number> = {};
+    const statusItems: Record<
+      string,
+      { schoolName: string; id: number; totalKw?: number }[]
+    > = {};
+    const activityCounts: Record<string, number> = {};
+    const activityItems: Record<string, { schoolName: string; id: number }[]> =
+      {};
+    const regionCounts: Record<string, number> = {};
+    const regionItems: Record<string, { schoolName: string; id: number }[]> =
+      {};
+
+    // initialize keys
+    const statusKeys = ["ยังไม่ได้ดำเนินการ", ...statusOption];
+    statusKeys.forEach((k) => {
+      statusCounts[k] = 0;
+      statusItems[k] = [];
+    });
+
+    const activityKeys = activityOption;
+    activityKeys.forEach((k) => {
+      activityCounts[k] = 0;
+      activityItems[k] = [];
+    });
+    // กรณีมี default “ยังไม่ได้ดำเนินการ” ใน activity
+    if (!activityCounts["ยังไม่ได้ดำเนินการ"]) {
+      activityCounts["ยังไม่ได้ดำเนินการ"] = 0;
+      activityItems["ยังไม่ได้ดำเนินการ"] = [];
+    }
+
+    const regionKeys = REGIONS;
+    regionKeys.forEach((r) => {
+      regionCounts[r] = 0;
+      regionItems[r] = [];
+    });
+
+    // วนข้อมูลแต่ละโรงเรียน
+    Object.entries(schoolData).forEach(([schoolKey, rows]) => {
+      // เก็บจังหวัด
+      const first = rows[0];
+      const province = first?.["province"];
+      if (province) provincesSet.add(province);
+
+      // ── Region ──
+      const region = first?.["school_region"];
+      if (region && regionItems[region]) {
+        regionCounts[region]++;
+        regionItems[region].push({ schoolName: schoolKey, id: rows[0].id });
+      }
+
+      // ── Status ──
+      let statusArr: { status: string; date: string }[] = [];
+      try {
+        statusArr = first?.status?.map((d) => JSON.parse(d)) || [];
+      } catch {}
+      let lastStatus = statusArr.length
+        ? statusArr.sort((a, b) => +new Date(a.date) - +new Date(b.date)).pop()!
+            .status
+        : "";
+      if (lastStatus.startsWith("ยกเลิก")) lastStatus = "ยกเลิก";
+      else if (lastStatus.startsWith("ไม่สนใจ")) lastStatus = "ไม่สนใจ";
+      else if (!lastStatus) lastStatus = "ยังไม่ได้ดำเนินการ";
+
+      if (!statusItems[lastStatus]) {
+        statusItems[lastStatus] = [];
+        statusCounts[lastStatus] = 0;
+      }
+      statusCounts[lastStatus]++;
+      statusItems[lastStatus].push({
+        schoolName: schoolKey,
+        id: rows[0].id,
+        totalKw: rows[0].total_kw_pk,
+      });
+
+      // ── Activity ──
+      let actArr: { activity: string; date: string }[] = [];
+      try {
+        actArr = first?.activity?.map((d) => JSON.parse(d)) || [];
+      } catch {}
+
+      // หา activity สุดท้าย
+      let rawAct = "";
+      if (actArr.length) {
+        rawAct = actArr
+          .sort((a, b) => +new Date(a.date) - +new Date(b.date))
+          .pop()!.activity;
+      }
+
+      // รวมทุก prefix เป็นคีย์เดียว
+      let lastAct = "";
+      if (rawAct.startsWith("ส่งหนังสือเชิญ")) {
+        lastAct = "ส่งหนังสือเชิญ";
+      } else if (!rawAct) {
+        lastAct = "ยังไม่ได้ดำเนินการ";
+      } else {
+        lastAct = rawAct;
+      }
+
+      // init bucket ถ้ายังไม่มี
+      if (!activityItems[lastAct]) {
+        activityItems[lastAct] = [];
+        activityCounts[lastAct] = 0;
+      }
+
+      // เก็บนับและเก็บ key ของโรงเรียน
+      activityCounts[lastAct]++;
+      activityItems[lastAct].push({ schoolName: schoolKey, id: rows[0].id });
+    });
+
+    // สร้างลิสต์คีย์จาก object จริง
+    const statusKeysList = Object.keys(statusItems);
+    const activityKeysList = Object.keys(activityItems);
+    const regionKeysList = Object.keys(regionItems);
+
+    return {
+      provincesCount: provincesSet.size,
+      provincesList: Array.from(provincesSet),
+
+      statusCounts,
+      statusItems,
+      statusKeysList,
+
+      activityCounts,
+      activityItems,
+      activityKeysList,
+
+      regionCounts,
+      regionItems,
+      regionKeysList,
+    };
+  }, [schoolData, statusOption, activityOption, REGIONS]);
   const handleRegionChange = (region: string[] | null | undefined) => {
     if (region) {
       setSelectedRegion(region);
     } else {
       setSelectedRegion([]);
     }
-    setPage(1);
+  };
+  const sel = {
+    selectedRegion,
+    selectedDepartment,
+    selectedProvince,
+    selectedArea,
+    selectedSchool,
   };
 
-  const regionOptions = _.groupBy(
-    masterData.masterData.filter((s) => {
-      const departmentMatch =
-        selectedDepartment.length === 0 ||
-        selectedDepartment.includes(s["สังกัด"]);
-      const provinceMatch =
-        selectedProvince.length === 0 ||
-        selectedProvince.includes(s["ชื่อจังหวัด"]);
-      const areaMatch =
-        selectedArea.length === 0 || selectedArea.includes(s["กฟภ"]);
-      const schoolMatch =
-        selectedSchool.length === 0 ||
-        selectedSchool.includes(s["ชื่อโรงเรียน"]);
-      return departmentMatch && provinceMatch && areaMatch && schoolMatch;
-    }),
-    "ภาค"
-  );
-
-  const departmentOptions = _.groupBy(
-    masterData.masterData.filter((s) => {
-      const regionMatch =
-        selectedRegion.length === 0 || selectedRegion.includes(s["ภาค"]);
-      const provinceMatch =
-        selectedProvince.length === 0 ||
-        selectedProvince.includes(s["ชื่อจังหวัด"]);
-      const areaMatch =
-        selectedArea.length === 0 || selectedArea.includes(s["กฟภ"]);
-      const schoolMatch =
-        selectedSchool.length === 0 ||
-        selectedSchool.includes(s["ชื่อโรงเรียน"]);
-      return regionMatch && provinceMatch && schoolMatch && areaMatch;
-    }),
-    "สังกัด"
-  );
-
-  const provinceOptions = _.groupBy(
-    masterData.masterData.filter((s) => {
-      const regionMatch =
-        selectedRegion.length === 0 || selectedRegion.includes(s["ภาค"]);
-      const departmentMatch =
-        selectedDepartment.length === 0 ||
-        selectedDepartment.includes(s["สังกัด"]);
-      const areaMatch =
-        selectedArea.length === 0 || selectedArea.includes(s["กฟภ"]);
-      const schoolMatch =
-        selectedSchool.length === 0 ||
-        selectedSchool.includes(s["ชื่อโรงเรียน"]);
-      return regionMatch && departmentMatch && schoolMatch && areaMatch;
-    }),
-    "ชื่อจังหวัด"
-  );
-
-  const areaOptions = _.groupBy(
-    masterData.masterData.filter((s) => {
-      const regionMatch =
-        selectedRegion.length === 0 || selectedRegion.includes(s["ภาค"]);
-      const provinceMatch =
-        selectedProvince.length === 0 ||
-        selectedProvince.includes(s["ชื่อจังหวัด"]);
-      const departmentMatch =
-        selectedDepartment.length === 0 ||
-        selectedDepartment.includes(s["สังกัด"]);
-      const schoolMatch =
-        selectedSchool.length === 0 ||
-        selectedSchool.includes(s["ชื่อโรงเรียน"]);
-      return regionMatch && provinceMatch && schoolMatch && departmentMatch;
-    }),
-    "กฟภ."
-  );
-  const schoolOptions = _.groupBy(
-    masterData.masterData.filter((s) => {
-      const regionMatch =
-        selectedRegion.length === 0 || selectedRegion.includes(s["ภาค"]);
-      const departmentMatch =
-        selectedDepartment.length === 0 ||
-        selectedDepartment.includes(s["สังกัด"]);
-      const provinceMatch =
-        selectedProvince.length === 0 ||
-        selectedProvince.includes(s["ชื่อจังหวัด"]);
-      const areaMatch =
-        selectedArea.length === 0 || selectedArea.includes(s["กฟภ"]);
-
-      return regionMatch && departmentMatch && provinceMatch && areaMatch;
-    }),
-    "ชื่อโรงเรียน"
-  );
-
-  // Sample data - replace with your actual data
-
-  const getStatusColor = (check: boolean, i: number) => {
-    if (check) {
-      if (i == 8 || i == 9) return "bg-red-500";
-      return "bg-green-500";
-    }
-
-    return "bg-gray-300";
-  };
-  // const getStatusColor = (step: number, currentStatus: any) => {
-  //   if (currentStatus >= step) {
-  //     return "bg-green-500";
-  //   }
-  //   return "bg-gray-300";
-  // };
-  // useEffect(() => {
-  //   setSchoolData(masterData.masterDataKey);
-  // }, [masterData]);
-  // console.log("regionOptions", regionOptions);
+  const {
+    regionOptions,
+    departmentOptions,
+    provinceOptions,
+    areaOptions,
+    schoolOptions,
+  } = useSchoolCascades(masterData.masterData, sel);
+  const totalSchool = Object.keys(schoolData).length;
   return (
-    <div className="p-4 overflow-auto relative ">
-      <div className="max-w-full mx-auto bg-white rounded-lg shadow-sm">
-        {/* Header with Filters */}
-        <div className=" border-b border-gray-200">
-          <div className="flex flex-wrap gap-4 items-center justify-between">
-            <div className="flex flex-wrap gap-2">
-              <CustomAutoComplete
-                label="เลือกภูมิภาค"
-                handleChange={handleRegionChange}
-                dataKey={regionOptions}
-              />
-              <CustomAutoComplete
-                label="เลือกสังกัด"
-                handleChange={(props) => {
-                  if (props) {
-                    setSelectedDepartment(props);
-                  } else {
-                    setSelectedDepartment([]);
-                  }
-                }}
-                dataKey={departmentOptions}
-              />
-              <CustomAutoComplete
-                label="เลือกจังหวัด"
-                handleChange={(props) => {
-                  if (props) {
-                    setSelectedProvince(props);
-                  } else {
-                    setSelectedProvince([]);
-                  }
-                }}
-                dataKey={provinceOptions}
-              />
+    <div className=" bg-gray-50 p-4">
+      {/* Header */}
+      <div className="mb-6">
+        <FancySchoolDialog
+          open={dailogState.open}
+          schools={dailogState.data || []}
+          selectedSchool={selected}
+          onSelect={(s) => setSelected(s)}
+          onClose={() => setDialogState({ open: false })}
+        />
+        <div className="flex flex-wrap gap-2 mb-4">
+          <CustomAutoComplete
+            label="เลือกภูมิภาค"
+            handleChange={handleRegionChange}
+            dataKey={regionOptions}
+          />
+          <CustomAutoComplete
+            label="เลือกสังกัด"
+            handleChange={(props) => {
+              if (props) {
+                setSelectedDepartment(props);
+              } else {
+                setSelectedDepartment([]);
+              }
+            }}
+            dataKey={departmentOptions}
+          />
+          <CustomAutoComplete
+            label="เลือกจังหวัด"
+            handleChange={(props) => {
+              if (props) {
+                setSelectedProvince(props);
+              } else {
+                setSelectedProvince([]);
+              }
+            }}
+            dataKey={provinceOptions}
+          />
 
-              <CustomAutoComplete
-                label="เลือกเขตไฟฟ้า"
-                handleChange={(props) => {
-                  if (props) {
-                    setSelectedArea(props);
-                  } else {
-                    setSelectedArea([]);
-                  }
-                }}
-                dataKey={areaOptions}
-              />
-              <CustomAutoComplete
-                label="ค้นหาชื่อโรงเรียน"
-                handleChange={(props) => {
-                  if (props) {
-                    setSelectedSchool(props);
-                  } else {
-                    setSelectedSchool([]);
-                  }
-                }}
-                dataKey={schoolOptions}
-              />
-              <CustomSingleAutoComplete
-                label="เลือกสถานะ"
-                handleChange={(props) => {
-                  setSelectedStatus(props);
-                }}
-                dataKey={_.groupBy(
-                  statusOption,
-                  (item) => item.split("12312321213")[0]
-                )}
-              />
-              <FilterPopover
-                onSubmit={(condition: string, value: string) => {
-                  setElectricFilter({
-                    condition,
-                    value,
-                  });
-                }}
-              />
-              {/* <CustomAutoComplete
-                label="เลือกการดำเนินการ"
-                handleChange={(props) => {
-                  console.log("props", props);
-                }}
-                dataKey={masterData.masterDataKey}
-              /> */}
-              {/* <button className="bg-purple-600 hover:bg-purple-700 text-white px-6  rounded-lg font-medium transition-colors">
-                สร้างรายงาน
-              </button> */}
+          <CustomAutoComplete
+            label="เลือกเขตไฟฟ้า"
+            handleChange={(props) => {
+              if (props) {
+                setSelectedArea(props);
+              } else {
+                setSelectedArea([]);
+              }
+            }}
+            dataKey={areaOptions}
+          />
+          <CustomAutoComplete
+            label="ค้นหาชื่อโรงเรียน"
+            handleChange={(props) => {
+              if (props) {
+                setSelectedSchool(props);
+              } else {
+                setSelectedSchool([]);
+              }
+            }}
+            dataKey={schoolOptions}
+          />
+          {/* <CustomSingleAutoComplete
+            label="เลือกสถานะ"
+            handleChange={(props) => {
+              setSelectedStatus(props);
+            }}
+            dataKey={_.groupBy(
+              statusOption,
+              (item) => item.split("12312321213")[0]
+            )}
+          /> */}
+          <FilterPopover
+            onSubmit={(condition: string, value: string) => {
+              setElectricFilter({
+                condition,
+                value,
+              });
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Main Stats Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4 mb-6">
+        <StatCard
+          value={totalKW.toLocaleString()}
+          label="ปริมาณการจัดส่ง (KW)"
+          icon={<Zap />}
+          bgColor="bg-purple-600"
+        />
+        <StatCard
+          value={totalSchool.toLocaleString()}
+          label="จำนวนโรงเรียน"
+          icon={<GraduationCap />}
+          bgColor="bg-green-500"
+        />
+        <StatCard
+          value={summaryData.provincesCount.toLocaleString()}
+          label="จำนวนจังหวัด"
+          icon={<MapPin />}
+          bgColor="bg-orange-500"
+        />
+        {/* <StatCard
+          value="12"
+          label="จำนวนสังกัด"
+          icon={<Building />}
+          bgColor="bg-green-600"
+        />
+        <StatCard
+          value="8"
+          label="จำนวนเขตไฟฟ้า"
+          icon={<Battery />}
+          bgColor="bg-cyan-500"
+        /> */}
+      </div>
+
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Left Column */}
+        <div className="flex-1">
+          {/* Secondary Stats */}
+          <section>
+            <h1 className="text-2xl font-bold pb-2">Status</h1>
+
+            {/* Circular Progress Charts */}
+            <div className="grid grid-cols-3 md:grid-cols- lg:grid-cols-5 gap-3">
+              {["ยังไม่ได้ดำเนินการ", ...statusOption].map((status) => {
+                const sumKw = _.sumBy(
+                  summaryData.statusItems[status],
+                  "totalKw"
+                );
+
+                return (
+                  <div
+                    key={status}
+                    onClick={() => {
+                      const schoolNameList = summaryData.statusItems[
+                        status
+                      ].map((d) => d.schoolName);
+                      onOpen(schoolNameList);
+                    }}
+                  >
+                    <StatusCard
+                      count={summaryData.statusCounts[status]}
+                      label={status}
+                      percentage={
+                        (100 * summaryData.statusCounts[status]) / totalSchool
+                      }
+                      totalKw={sumKw.toFixed(2)}
+                    />
+                  </div>
+                );
+              })}
             </div>
-          </div>
-          <p className="text-end p-2 font-bold text-2xl">
-            รวม {totalKW.toLocaleString()} KW
-          </p>
-        </div>
+          </section>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-gradient-to-r from-purple-600 to-purple-500 text-white">
-                <th className="text-center py-4 px-6 font-medium">
-                  ชื่อโรงเรียน
-                </th>
-                <th className="text-center py-4 px-6 font-medium">KW_PK</th>
-                <th className="text-center py-4 px-6 font-medium">จังหวัด</th>
-                <th className="text-center py-4 px-6 font-medium">สังกัด</th>
-                <th className="text-center py-4 px-6 font-medium">
-                  สถานะปัจจุบัน
-                </th>
-                <th className="text-center py-4 px-6 font-medium">สถานะ</th>
-                <th className="text-center py-4 px-6 font-medium">จัดการ</th>
-              </tr>
-            </thead>
-            <tbody>
-              {Object.keys(schoolData)
-                .sort(collator.compare)
-
-                .splice((page - 1) * perPage, perPage)
-                .map((key, index) => {
-                  const item = schoolData[key][0];
-                  const status = item?.statusArr
-                    ? JSON.parse(item?.statusArr)
-                    : [];
-                  const groupData = _.groupBy(status, "status");
-                  let meterArr =
-                    item.meterArr !== ""
-                      ? JSON.parse(item.meterArr)
-                      : schoolData[key]?.map((d) => {
-                          return {
-                            ca: d.CA,
-                            kw_pk: d.KW_PK,
-                            rate: d.อัตรา,
-                          };
-                        });
-                  return (
-                    <tr
-                      onClick={() => {
-                        console.log(schoolData[key]);
-                      }}
-                      key={item.id}
-                      className={`border-b border-gray-100 ${
-                        index % 2 === 0 ? "bg-white" : "bg-gray-50"
-                      } hover:bg-purple-50 transition-colors`}
-                    >
-                      <td className="py-2 px-6 text-gray-800 text-start">
-                        {item["ชื่อโรงเรียน"]}
-                      </td>
-                      <td className="py-2 px-6 text-gray-800 text-center">
-                        <Tooltip
-                          key={`${item.id}`}
-                          enterTouchDelay={100}
-                          leaveTouchDelay={3000}
-                          slotProps={{
-                            tooltip: {
-                              sx: {
-                                bgcolor: "#fff", // พื้นหลังขาว
-                                color: "text.primary", // สีตัวอักษรเป็นสีหลัก (ดำ)
-                                boxShadow: 1, // เพิ่มเงาเล็กน้อย
-                                maxWidth: 240,
-                              },
-                            },
-                            arrow: {
-                              sx: {
-                                color: "#fff", // ลูกศรเป็นสีขาวเช่นกัน
-                              },
-                            },
-                          }}
-                          title={
-                            <Box sx={{ p: 1, maxWidth: 200 }}>
-                              <Typography variant="subtitle2" gutterBottom>
-                                รายละเอียด CA
-                              </Typography>
-                              <List dense disablePadding>
-                                {meterArr?.map(
-                                  (
-                                    d: {
-                                      ca: string;
-                                      kw_pk: string;
-                                      rate: string;
-                                    },
-                                    idx: number
-                                  ) => (
-                                    <ListItemText
-                                      primary={
-                                        <Typography
-                                          variant="body2"
-                                          fontWeight={500}
-                                          noWrap
-                                        >
-                                          {d.ca}
-                                        </Typography>
-                                      }
-                                      secondary={
-                                        <Typography variant="caption" noWrap>
-                                          KW_PK: {d.kw_pk} | อัตรา: {d.rate}
-                                        </Typography>
-                                      }
-                                    />
-                                  )
-                                )}
-                              </List>
-                            </Box>
-                          }
-                        >
-                          <div className="flex items-center">
-                            <div>
-                              {(
-                                parseFloat(String(item["รวมKW_PK"] || 0)) || 0
-                              )?.toLocaleString()}
-                            </div>
-                          </div>
-                        </Tooltip>
-                      </td>
-                      <td className="py-2 px-6 text-gray-600 text-center">
-                        {item["ชื่อจังหวัด"]}
-                      </td>
-                      <td className="py-2 px-6 text-gray-600 text-center">
-                        {item["สังกัด"]}
-                      </td>
-                      <td className="py-2 px-6 text-gray-600 text-center">
-                        {
-                          (_.last(status) as { status: string; date: string })
-                            ?.status
-                        }
-                      </td>
-                      <td className="py-2 px-6">
-                        <div className="flex items-center justify-center space-x-1">
-                          {statusOption.map((statusData: string, i) => {
-                            const stepIndex = i + 1;
-
-                            let items: (typeof status)[] = [];
-
-                            if (statusData === "ยกเลิก") {
-                              // เอา entry ทั้งหมดที่ key ขึ้นต้นด้วย "ยกเลิก"
-                              items = _(groupData)
-                                .pickBy((_v, key) => key.startsWith("ยกเลิก"))
-                                .values()
-                                .flatten()
-                                .value();
-                            } else if (statusData === "ไม่สนใจ") {
-                              // ถ้าต้องการรวม "ไม่สนใจ ..." ด้วย
-                              items = _(groupData)
-                                .pickBy((_v, key) => key.startsWith("ไม่สนใจ"))
-                                .values()
-                                .flatten()
-                                .value();
-                            } else {
-                              // กรณีทั่วไป ใช้ตรงๆ
-                              items = groupData[statusData] ?? [];
-                            }
-                            return (
-                              <Tooltip
-                                key={`${item.id}_${stepIndex}`}
-                                enterTouchDelay={100}
-                                leaveTouchDelay={3000}
-                                title={statusData}
-                              >
-                                <div className="flex items-center">
-                                  <div
-                                    className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium ${getStatusColor(
-                                      items.length > 0,
-                                      stepIndex
-                                    )}`}
-                                  >
-                                    {stepIndex}
-                                  </div>
-                                  {/* {stepIndex < status.length - 1 && (
-                                    <div className="w-4 h-0.5 bg-gray-300 mx-1"></div>
-                                  )} */}
-                                </div>
-                              </Tooltip>
-                            );
-                          })}
-                        </div>
-                      </td>
-                      <td className="py-2 px-6">
-                        <div className="flex items-center justify-center space-x-2">
-                          {/* Coming soon... */}
-                          <button
-                            className="p-2 text-yellow-600 hover:bg-orange-50 rounded-full transition-colors"
-                            title="แก้ไข"
-                            onClick={() => {
-                              router.replace(`/menu/form?school=${item.id}`);
-                            }}
-                          >
-                            <Edit className="w-6 h-6" />
-                          </button>
-                          {/* <button
-                            className="p-2 text-green-600 hover:bg-green-50 rounded-full transition-colors"
-                            title="ดู"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          {/* <button
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-full transition-colors"
-                            title="ลบ"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button> */}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Mobile View - Card Layout */}
-        {/* <div className="block md:hidden">
-          {data.map((item, index) => (
-            <div
-              key={item.id}
-              className="p-4 border-b border-gray-100 bg-white"
-            >
-              <div className="space-y-3">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-medium text-gray-800">{item.school}</h3>
-                    <p className="text-sm text-gray-600">
-                      {item.district} - {item.province}
-                    </p>
-                  </div>
-                  <div className="flex space-x-1">
-                    <button className="p-2 text-green-600 hover:bg-green-50 rounded-full">
-                      <Eye className="w-4 h-4" />
-                    </button>
-                    <button className="p-2 text-orange-600 hover:bg-orange-50 rounded-full">
-                      <FileText className="w-4 h-4" />
-                    </button>
-                    <button className="p-2 text-red-600 hover:bg-red-50 rounded-full">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-1 overflow-x-auto">
-                  {item.status.map((step, stepIndex) => (
-                    <div key={step} className="flex items-center flex-shrink-0">
-                      <div
-                        className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-medium ${getStatusColor(
-                          step,
-                          7
-                        )}`}
-                      >
-                        {step}
-                      </div>
-                      {stepIndex < item.status.length - 1 && (
-                        <div className="w-3 h-0.5 bg-gray-300 mx-1"></div>
-                      )}
+          <section>
+            <h1 className="text-2xl font-bold pb-2">Activity</h1>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              {[
+                "ส่งหนังสือเชิญ",
+                "รอส่งหนังสือขอเข้าชี้แจง",
+                "ประเมินโครงการ+เตรียมทำข้อเสนอ",
+                "นัดวันนำเสนอข้อเสนอโครงการ",
+                "ติดตามสถานะโรงเรียนพิจารณาข้อเสนอ",
+                "ติดตามตามเอกสารรอเซ็นต์สัญญา",
+                "ติดต่อไม่ได้",
+                // "ยกเลิกไม่ทำโครงการ",
+              ].map((activity) => {
+                return (
+                  <div
+                    onClick={() => {
+                      const schoolNameList = summaryData.activityItems[
+                        activity
+                      ].map((d) => d.schoolName);
+                      onOpen(schoolNameList);
+                    }}
+                    key={activity}
+                    className="bg-white p-6 rounded-xl shadow-lg text-center cursor-pointer hover:bg-gray-100 transition-all duration-300"
+                  >
+                    {/* <div className="text-green-500 text-2xl mb-1">✓</div> */}
+                    <div className="text-sm text-gray-600">{activity}</div>
+                    <div className="text-2xl font-bold">
+                      {summaryData.activityCounts[activity] || 0}
                     </div>
-                  ))}
-                </div>
-              </div>
+                  </div>
+                );
+              })}
             </div>
-          ))}
-        </div> */}
+          </section>
+        </div>
 
-        {/* Pagination */}
-
-        <div className="p-6 border-t border-gray-200 grid grid-cols-9 items-center justify-between">
-          <div className="text-sm text-gray-600 col-span-2">
-            แสดง {page * perPage - perPage + 1}-
-            {Math.min(page * perPage, Object.keys(schoolData).length ?? 0)} จาก{" "}
-            {Object.keys(schoolData).length ?? 0} รายการ
-          </div>
-          <div className="col-span-2"></div>
-          <div></div>
-          <div></div>
-
-          <div className="flex justify-end space-x-2 col-span-3">
-            <Pagination
-              page={page}
-              onChange={(e, v) => setPage(v)}
-              count={Math.ceil((Object.keys(schoolData).length ?? 1) / perPage)}
-              shape="rounded"
-            />
+        {/* Right Sidebar */}
+        <div className="w-full lg:w-80">
+          <div className="bg-white rounded-xl shadow-lg p-4">
+            <h3 className="font-bold text-gray-800 mb-4">
+              สำนักงานส่วนกลางรายงาน
+            </h3>
+            <div className="space-y-3">
+              {REGIONS.map((item, index) => (
+                <div key={index} className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">{item}</span>
+                  <span
+                    className={`bg-purple-500 text-white px-3 py-1 rounded-full text-sm font-medium`}
+                  >
+                    {summaryData.regionCounts[item]}
+                  </span>
+                </div>
+              ))}
+            </div>
+            {/* <div className="mt-4 pt-4 border-t">
+              <div className="text-sm text-gray-600 text-center">
+                จำนวนโรงเรียนยังไม่ได้ลงทะเบียน
+              </div>
+            </div> */}
           </div>
         </div>
       </div>
     </div>
-  );
-}
-
-const FormPage = () => {
-  return (
-    <main className="flex-1 p-4 md:p-6 overflow-x-hidden">
-      {/* Top Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 mb-6 md:mb-8">
-        {[
-          {
-            title: "Total Revenue",
-            value: "฿124,500",
-            change: "+12%",
-            color: "text-green-600",
-          },
-          {
-            title: "Active Users",
-            value: "2,547",
-            change: "+5%",
-            color: "text-blue-600",
-          },
-          {
-            title: "Orders",
-            value: "1,234",
-            change: "-2%",
-            color: "text-red-600",
-          },
-          {
-            title: "Products",
-            value: "567",
-            change: "+8%",
-            color: "text-purple-600",
-          },
-        ].map((stat, index) => (
-          <div
-            key={index}
-            className="bg-white p-4 md:p-6 rounded-lg shadow-sm border border-gray-200"
-          >
-            <h3 className="text-xs md:text-sm font-medium text-gray-500 mb-1 md:mb-2 truncate">
-              {stat.title}
-            </h3>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-              <span className="text-lg md:text-2xl font-bold text-gray-900">
-                {stat.value}
-              </span>
-              <span
-                className={`text-xs md:text-sm font-medium ${stat.color} mt-1 sm:mt-0`}
-              >
-                {stat.change}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-        {/* Chart Section */}
-        <div className="lg:col-span-2 bg-white p-4 md:p-6 rounded-lg shadow-sm border border-gray-200">
-          <h2 className="text-base md:text-lg font-semibold text-gray-800 mb-4">
-            Revenue Overview
-          </h2>
-          <div className="h-48 md:h-64 bg-gradient-to-r from-blue-50 to-indigo-100 rounded-lg flex items-center justify-center">
-            <div className="text-center">
-              <BarChart3 size={36} className="text-blue-500 mx-auto mb-2" />
-              <p className="text-sm md:text-base text-gray-600">
-                Chart Component
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Activity Feed */}
-        <div className="bg-white p-4 md:p-6 rounded-lg shadow-sm border border-gray-200">
-          <h2 className="text-base md:text-lg font-semibold text-gray-800 mb-4">
-            Recent Activity
-          </h2>
-          <div className="space-y-3 md:space-y-4">
-            {[
-              {
-                action: "New user registered",
-                time: "2 minutes ago",
-                type: "user",
-              },
-              {
-                action: "Order #1234 completed",
-                time: "1 hour ago",
-                type: "order",
-              },
-              {
-                action: "Database backup completed",
-                time: "3 hours ago",
-                type: "system",
-              },
-              {
-                action: "New message received",
-                time: "5 hours ago",
-                type: "message",
-              },
-            ].map((activity, index) => (
-              <div
-                key={index}
-                className="flex items-center space-x-3 p-2 md:p-3 bg-gray-50 rounded-lg"
-              >
-                <div
-                  className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                    activity.type === "user"
-                      ? "bg-green-500"
-                      : activity.type === "order"
-                      ? "bg-blue-500"
-                      : activity.type === "system"
-                      ? "bg-yellow-500"
-                      : "bg-purple-500"
-                  }`}
-                ></div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs md:text-sm font-medium text-gray-900 truncate">
-                    {activity.action}
-                  </p>
-                  <p className="text-xs text-gray-500">{activity.time}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Table Section */}
-      <div className="mt-6 md:mt-8 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="px-4 md:px-6 py-4 border-b border-gray-200">
-          <h2 className="text-base md:text-lg font-semibold text-gray-800">
-            Recent Orders
-          </h2>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  ID
-                </th>
-                <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Customer
-                </th>
-                <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
-                  Product
-                </th>
-                <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Amount
-                </th>
-                <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {[
-                {
-                  id: "#1234",
-                  customer: "สมชาย ใจดี",
-                  product: "Product A",
-                  amount: "฿1,500",
-                  status: "completed",
-                },
-                {
-                  id: "#1235",
-                  customer: "สมหญิง สวยงาม",
-                  product: "Product B",
-                  amount: "฿2,300",
-                  status: "pending",
-                },
-                {
-                  id: "#1236",
-                  customer: "สมศรี มีสุข",
-                  product: "Product C",
-                  amount: "฿800",
-                  status: "processing",
-                },
-                {
-                  id: "#1237",
-                  customer: "สมพร รวยเงิน",
-                  product: "Product D",
-                  amount: "฿3,200",
-                  status: "completed",
-                },
-              ].map((order, index) => (
-                <tr key={index} className="hover:bg-gray-50">
-                  <td className="px-3 md:px-6 py-4 whitespace-nowrap text-xs md:text-sm font-medium text-gray-900">
-                    {order.id}
-                  </td>
-                  <td className="px-3 md:px-6 py-4 whitespace-nowrap text-xs md:text-sm text-gray-900">
-                    <div className="truncate max-w-32 md:max-w-none">
-                      {order.customer}
-                    </div>
-                  </td>
-                  <td className="px-3 md:px-6 py-4 whitespace-nowrap text-xs md:text-sm text-gray-900 hidden sm:table-cell">
-                    {order.product}
-                  </td>
-                  <td className="px-3 md:px-6 py-4 whitespace-nowrap text-xs md:text-sm text-gray-900">
-                    {order.amount}
-                  </td>
-                  <td className="px-3 md:px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        order.status === "completed"
-                          ? "bg-green-100 text-green-800"
-                          : order.status === "pending"
-                          ? "bg-yellow-100 text-yellow-800"
-                          : "bg-blue-100 text-blue-800"
-                      }`}
-                    >
-                      {order.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </main>
   );
 };
 

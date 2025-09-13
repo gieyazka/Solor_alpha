@@ -252,7 +252,7 @@ export const datatoFormBuliding = (
             },
           },
           area: d.area ?? 0,
-          slopeDegree: d.slopeDegree || [],
+          slopeDegree: d.slope_degree || [],
 
           shapes: {
             open_gable: d.shapes_open_gable || false,
@@ -296,7 +296,7 @@ export const datatoFormBuliding = (
           widthEave2: d.width_roof_two || 0,
           lightningProtector: d.lightning_protector || false,
           ladder: d.ladder || false,
-          jackRoof: d.jackRoof || false,
+          jackRoof: d.jack_roof || false,
           turbine: d.turbine || false,
           otherNotes: d.remark || "",
         }))
@@ -313,3 +313,100 @@ export const formatUrlImage = (imageId: string[]) => {
     return `${process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT}/storage/buckets/${process.env.NEXT_PUBLIC_BUCKET_SOLAR}/files/${d}/view?project=${process.env.NEXT_PUBLIC_APPWRITE_PROJECT}&mode=admin`;
   });
 };
+
+
+
+
+export const toId = (v: unknown) => String(v ?? "").trim();
+export const sameId = (a?: unknown, b?: unknown) => toId(a) === toId(b);
+
+// ดึง fileId จาก URL ของ Appwrite Storage หรือรับ id ตรง ๆ
+export const extractFileId = (s: string) => {
+  const str = String(s).trim();
+  if (str.startsWith("http")) {
+    const m = str.match(/\/files\/([a-zA-Z0-9]+)(?=\/|\?|$)/);
+    return m?.[1] ?? "";
+  }
+  return str;
+};
+
+// เซ็ต fileId ที่ถูกใช้อยู่ จากลิสต์ (URL หรือ id)
+export const usedFileIdSet = (arr?: (string | File)[]) =>
+  new Set(
+    (arr ?? [])
+      .map((x) => (typeof x === "string" ? extractFileId(x) : "")) // File จะได้ ""
+      .filter(Boolean),
+  );
+
+// อัปโหลดภาพหลายไฟล์ -> ได้ ids
+export async function uploadFiles(storage: any, bucketId: string, files: File[]) {
+  return pMap(
+    files,
+    async (f) => {
+      const up = await storage.createFile(bucketId, ID.unique(), f);
+      return up.$id as string;
+    },
+    { concurrency: 3 },
+  );
+}
+
+// logger step สั้น ๆ
+export async function step<T>(label: string, fn: () => Promise<T>) {
+  console.time(label);
+  try {
+    return await fn();
+  } finally {
+    console.timeEnd(label);
+  }
+}
+
+// ===== Generic diff =====
+
+// oldArr: เอกสารเดิม (มี $id)
+// newArr: ฟอร์มใหม่ (มี docId ถ้าเป็นของเดิม, undefined = ของใหม่)
+export function computeCrud<TOld, TNew>(
+  oldArr: TOld[] = [],
+  newArr: TNew[] = [],
+  getOldId: (o: TOld) => unknown,
+  getNewId: (n: TNew) => unknown | undefined,
+) {
+  const newExistingIds = new Set(
+    newArr.map(getNewId).filter(Boolean).map(toId),
+  );
+  const toDelete = oldArr.filter((o) => !newExistingIds.has(toId(getOldId(o))));
+
+  const oldIds = new Set(oldArr.map((o) => toId(getOldId(o))));
+  const toUpdate = newArr.filter((n) => {
+    const id = getNewId(n);
+    return !!id && oldIds.has(toId(id)) && !toDelete.some((o) => sameId(getOldId(o), id));
+  });
+
+  const toAdd = newArr.filter((n) => !getNewId(n));
+
+  return { toAdd, toUpdate, toDelete };
+}
+
+// ประมวลผล CRUD พร้อมกัน ด้วย format/add/update/delete
+export async function processCrud<TOld, TNew, TAddPayload>(
+  name: string,
+  oldArr: TOld[] | undefined,
+  newArr: TNew[] | undefined,
+  getOldId: (o: TOld) => unknown,
+  getNewId: (n: TNew) => unknown | undefined,
+  formatAdd: (rows: TNew[]) => TAddPayload[], // ฟอร์แมตของ "create"
+  onCreate: (payload: TAddPayload) => Promise<any>,
+  onUpdate: (n: TNew) => Promise<any>,
+  onDelete: (o: TOld) => Promise<any>,
+) {
+  const { toAdd, toUpdate, toDelete } = computeCrud(oldArr ?? [], newArr ?? [], getOldId, getNewId);
+
+  // เตรียม payload สำหรับ create
+  const addPayloads = toAdd.length ? formatAdd(toAdd) : [];
+
+  // รันขนาน (ห้าม await ข้างในอาร์เรย์ของ Promise.all)
+  await Promise.all([
+    pMap(toUpdate, (row) => onUpdate(row), { concurrency: 3 }),
+    pMap(addPayloads, (payload) => onCreate(payload), { concurrency: 3 }),
+    pMap(toDelete, (row) => onDelete(row), { concurrency: 3 }),
+  ]);
+}

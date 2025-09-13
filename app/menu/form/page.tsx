@@ -22,7 +22,7 @@ import {
   Map,
 } from "lucide-react";
 import { useSchoolStore } from "@/stores";
-import { SchoolData } from "@/@type";
+import { AppwriteType, SchoolProps } from "@/@type";
 import { Autocomplete, Button, IconButton, TextField } from "@mui/material";
 import clsx from "clsx";
 import dayjs from "dayjs";
@@ -52,10 +52,58 @@ import { updateMasterData } from "@/actions/excel";
 import { formatNumber, parseNumber, toThaiNumber } from "@/utils/fn";
 import { inputClasses, labelClasses, sectionClasses } from "@/utils/style";
 import { usePathname, useSearchParams } from "next/navigation";
+import { createSchool, getLastestId, updateSchool } from "@/actions/school";
+import AddSchoolDialog from "./add_school";
+import Swal from "sweetalert2";
+type formProps = {
+  statusArrObject: { status: string; date?: string; remark?: string }[];
+  activityArrObject: { activity: string; date?: string }[];
+  meterArrObject: { ca: string; kw_pk: string; rate: string }[];
+  location: string;
+};
 export default function SolarCellForm() {
   const masterStore = useSchoolStore();
   const [hidden, setHidden] = useState(true);
   const pathname = usePathname();
+  const [selectSchool, setSelectSchool] = useState<number | undefined>(
+    undefined
+  );
+  const [openAddSchool, setOpenAddSchool] = useState(false);
+
+  const handleAddSchool = async (schoolName: string) => {
+    const matches = Object.keys(masterStore.masterDataKey).filter((k) =>
+      k
+        .replace(/\s+/g, "")
+        .toLowerCase()
+        .includes(schoolName.replace(/\s+/g, "").toLowerCase())
+    );
+    if (matches.length > 0) {
+      Swal.fire({
+        icon: "error",
+        title: "มีโรงเรียนนี้อยู่แล้ว",
+      });
+      throw "School already exists";
+    }
+
+    try {
+      const lastId = await getLastestId();
+
+      const res = await createSchool({
+        id: lastId ? lastId + 1 : 1,
+        school_name: schoolName,
+      });
+
+      masterStore.addSchoolRow({ data: res! });
+      Swal.fire({
+        icon: "success",
+        title: "เพิ่มโรงเรียนใหม่เรียบร้อยแล้ว",
+      });
+    } catch (error) {
+      console.error("Error adding school:", error);
+    }
+
+    // TODO: Call API หรือเพิ่มข้อมูลใน state
+  };
 
   useEffect(() => {
     const target = document.getElementById("topForm");
@@ -84,7 +132,7 @@ export default function SolarCellForm() {
     formState: { errors, isSubmitting },
     setValue,
     control,
-  } = useForm<Partial<SchoolData>>({
+  } = useForm<Partial<SchoolProps> & formProps>({
     defaultValues: {
       statusArrObject: [{ status: "", date: "" }],
       activityArrObject: [{ activity: "", date: "" }],
@@ -100,66 +148,151 @@ export default function SolarCellForm() {
     window.open(url, "_blank");
   };
 
-  const onSubmit: SubmitHandler<Partial<SchoolData>> = async (d) => {
-    let data = JSON.parse(JSON.stringify(d, null, 2)) as Partial<SchoolData>;
+  const onSubmit: SubmitHandler<
+    Partial<AppwriteType<SchoolProps>> & formProps
+  > = async (d) => {
+    let data = d;
     const [lat, lng] = data.location?.split(",") ?? [];
-    data.Latitude = lat || "";
-    data.Longitude = lng || "";
-    // console.log(71, data);
-    // console.log('first', Object.keys(data))
-
-    const formulaColumns = ["id"]; // หรือ 'A' ถ้าคุณ map เป็น column letter
-    const filteredHeaders = masterStore.headers.filter(
-      (h) => !formulaColumns.includes(h)
-    );
-    const startColLetter = columnToLetter(2);
-    const endColLetter = columnToLetter(filteredHeaders.length + 1);
-
-    const rowUpdate = parseInt(String(data.id), 10) + 1;
-    const rowData = filteredHeaders.map((key) => {
-      if (key === "meterArr") {
-        return data.meterArrObject?.[0].ca !== "" &&
-          data.meterArrObject?.[0].ca !== undefined
-          ? JSON.stringify(data.meterArrObject)
-          : "";
-      }
-      if (key === "statusArr") {
-        return data.statusArrObject?.[0].status !== "" &&
-          data.statusArrObject?.[0].status !== undefined
-          ? JSON.stringify(data.statusArrObject)
-          : "";
-      }
-      if (key === "activityArr") {
-        return data.activityArrObject?.[0].activity !== "" &&
-          data.activityArrObject?.[0].activity !== undefined
-          ? JSON.stringify(data.activityArrObject)
-          : "";
-      }
-      return data[key as keyof SchoolData] ?? "";
-    });
-
+    data.latitude = lat ? parseFloat(lat) : undefined;
+    data.longitude = lng ? parseFloat(lng) : undefined;
+    // console.log("data", data.$id);
+    const formatData: SchoolProps = {
+      id: data.id!,
+      no: data.no!,
+      solarEst: data.solarEst,
+      location_checked:
+        typeof data.location_checked === "string"
+          ? (data.location_checked as string).toUpperCase() === "YES"
+            ? true
+            : (data.location_checked as string).toUpperCase() === "NO"
+            ? false
+            : undefined
+          : data.location_checked,
+      school_name: data.school_name!,
+      school_address: data.school_address,
+      subdistrict: data.subdistrict,
+      district: data.district,
+      province: data.province,
+      post_code: data.post_code,
+      total_students: data.total_students
+        ? parseInt(data.total_students.toString())
+        : undefined,
+      school_region: data.school_region,
+      school_affiliation: data.school_affiliation,
+      school_district: data.school_district,
+      electricity_provider: data.electricity_provider,
+      power_rate: data.power_rate
+        ? parseFloat(data.power_rate.toString())
+        : undefined,
+      ca: data.ca,
+      operation_status: data.operation_status,
+      contact_email: data.contact_email,
+      school_contact_name: data.school_contact_name,
+      school_contact_position: data.school_contact_position,
+      school_contact_phone: data.school_contact_phone,
+      school_director: data.school_director,
+      school_director_phone: data.school_director_phone,
+      electricity_avg_month: data.electricity_avg_month
+        ? parseFloat(data.electricity_avg_month.toString().replaceAll(/,/g, ""))
+        : undefined,
+      investor_name: data.investor_name,
+      moe_doc_no: data.moe_doc_no,
+      moe_doc_date: data.moe_doc_date,
+      pea_no: data.pea_no,
+      pea_date: data.pea_date,
+      cover_sheet_no: data.cover_sheet_no,
+      cover_sheet_date: data.cover_sheet_date,
+      book_no: data.book_no,
+      book_date: data.book_date,
+      moe_proposal_no: data.moe_proposal_no,
+      proposal_date: data.proposal_date,
+      simulation: data.simulation,
+      latitude: data.latitude
+        ? parseFloat(data.latitude.toString())
+        : undefined,
+      longitude: data.longitude
+        ? parseFloat(data.longitude.toString())
+        : undefined,
+      status: data.statusArrObject.map((d) => {
+        if (d.status === "ยกเลิก" || d.status === "ไม่สนใจ") {
+          d.status += ` ${d.remark}`;
+        }
+        delete d.remark;
+        return JSON.stringify(d);
+      }),
+      activity: data.activityArrObject.map((d) => JSON.stringify(d)),
+      meter: data.meterArrObject.map((d) => JSON.stringify(d)),
+      total_kw_pk: data.total_kw_pk
+        ? parseFloat(data.total_kw_pk.toString())
+        : undefined,
+      esco_understanding_score: data.esco_understanding_score
+        ? parseInt(data.esco_understanding_score.toString())
+        : undefined,
+      score_cooperation: data.score_cooperation
+        ? parseInt(data.score_cooperation.toString())
+        : undefined,
+      score_decision_power: data.score_decision_power
+        ? parseInt(data.score_decision_power.toString())
+        : undefined,
+      score_data_readiness: data.score_data_readiness
+        ? parseInt(data.score_data_readiness.toString())
+        : undefined,
+      score_electricity_arrears: data.score_electricity_arrears
+        ? parseInt(data.score_electricity_arrears.toString())
+        : undefined,
+      note_school: data.note_school,
+      score_install_area: data.score_install_area
+        ? parseInt(data.score_install_area?.toString())
+        : undefined,
+      score_roof_material: data.score_roof_material
+        ? parseInt(data.score_roof_material?.toString())
+        : undefined,
+      score_structure: data.score_structure
+        ? parseInt(data.score_structure?.toString())
+        : undefined,
+      score_connection_wiring: data.score_connection_wiring
+        ? parseInt(data.score_connection_wiring?.toString())
+        : undefined,
+      score_site_access: data.score_site_access
+        ? parseInt(data.score_site_access?.toString())
+        : undefined,
+      note_site: data.note_site,
+      score_total: data.score_total
+        ? parseInt(data.score_total?.toString())
+        : undefined,
+      link_invitation: data.link_invitation,
+      link_acceptance: data.link_acceptance,
+      link_proposal: data.link_proposal,
+    };
+    // console.log("formatData", formatData);
+    // return;
     try {
-      const res = await updateMasterData({
-        data: rowData as string[],
-        endColumn: endColLetter,
-        row: rowUpdate,
-        startColumn: startColLetter,
+      const res = await updateSchool({
+        id: String(data.$id),
+        data: formatData,
       });
-
       // TODO: update data
-      alert("✅ เขียนข้อมูลสำเร็จ");
+      Swal.fire({
+        icon: "success",
+        title: "เขียนข้อมูลสำเร็จ",
+      });
       const section = document.getElementById("topForm");
       if (section) {
         section.scrollIntoView({ behavior: "smooth" });
       }
       masterStore.updateData({
         id: String(data.id),
-        data: rowData as string[],
+        data: res as AppwriteType<SchoolProps>,
       });
-      // reset();
+      reset();
     } catch (error) {
-      alert("เขียนข้อมูลไม่สำเร็จ");
-      window.location.reload();
+      Swal.fire({
+        icon: "error",
+        title: "เขียนข้อมูลไม่สำเร็จ",
+      });
+      console.log("error", error);
+
+      // window.location.reload();
     }
   };
 
@@ -176,12 +309,14 @@ export default function SolarCellForm() {
     name: "meterArrObject",
   });
 
-  const handleChangeSchool = (data: SchoolData[] | undefined) => {
+  const handleChangeSchool = (data: SchoolProps[] | undefined) => {
+    console.log("data", data?.[0]);
     clearQuery();
+    setSelectSchool(data?.[0]?.id || undefined);
     const d = data?.[0];
-    if (d && d.ชื่อโรงเรียน) {
-      if (d?.activityArr) {
-        const status = JSON.parse(d.activityArr) as {
+    if (d && d.school_name) {
+      if (d?.activity) {
+        const status = d.activity.map((d) => JSON.parse(d)) as {
           activity: string;
           date: string;
         }[];
@@ -191,104 +326,170 @@ export default function SolarCellForm() {
           setValue(`activityArrObject.${i}.date`, d.date);
         });
       }
-      const findSchoolByKey = masterStore.masterDataKey[d.ชื่อโรงเรียน];
+      const findSchoolByKey = masterStore.masterDataKey[d.school_name];
 
       Object.keys(d).forEach((k) => {
-        const key: keyof SchoolData = k as keyof SchoolData;
-        setValue(key, d[key]);
+        const key: keyof SchoolProps = k as keyof SchoolProps;
+        if (
+          key === "moe_doc_date" ||
+          key === "pea_date" ||
+          key === "cover_sheet_date" ||
+          key === "book_date" ||
+          key === "proposal_date"
+        ) {
+          console.log("d[key]", key, d[key]);
+          if (d[key]?.includes("/")) {
+            const [day, month, year] = d[key]?.split("/");
+            const date = `${year}-${month.padStart(2, "0")}-${day.padStart(
+              2,
+              "0"
+            )}`;
+            setValue(key, date);
+          } else {
+            setValue(key, d[key]);
+          }
+        } else {
+          setValue(key, d[key]);
+        }
       });
 
-      if (findSchoolByKey[0].meterArr === "") {
+      if (findSchoolByKey[0].meter?.length === 0) {
         const meterData: {
           ca: string;
           kw_pk: string;
           rate: string;
         }[] = [];
         let sumPk = 0;
-        findSchoolByKey.forEach((school) => {
-          meterData.push({
-            ca: String(school.CA),
-            kw_pk: String(school.KW_PK),
-            rate: String(school["อัตรา"]),
-          });
-          sumPk += Number(school.KW_PK) || 0;
-        });
-        setValue("รวมKW_PK", String(sumPk));
-        meterFieldArr.replace(meterData);
+        // findSchoolByKey.forEach((school) => {
+        //   meterData.push({
+        //     ca: String(school.ca),
+        //     kw_pk: String(school.k),
+        //     rate: String(school["อัตรา"]),
+        //   });
+        //   sumPk += Number(school.KW_PK) || 0;
+        // });
+        // setValue("รวมKW_PK", String(sumPk));
+        meterFieldArr.replace([{ ca: "", kw_pk: "", rate: "" }]);
       } else {
-        const meterData = JSON.parse(findSchoolByKey[0].meterArr);
-        meterFieldArr.replace(meterData);
+        const meterData = findSchoolByKey[0].meter?.map((d) => JSON.parse(d));
+        meterData && meterFieldArr.replace(meterData);
 
         if (
-          findSchoolByKey[0]["รวมKW_PK"] !== "" &&
-          findSchoolByKey[0]["รวมKW_PK"] !== undefined
+          findSchoolByKey[0]["total_kw_pk"] !== null &&
+          findSchoolByKey[0]["total_kw_pk"] !== undefined
         ) {
-          setValue("รวมKW_PK", findSchoolByKey[0]["รวมKW_PK"]);
+          setValue("total_kw_pk", findSchoolByKey[0]["total_kw_pk"]);
         } else {
           let sumPk = 0;
-          meterData.forEach(
-            (meter: { ca: string; kw_pk: string; rate: string }) => {
-              sumPk += Number(meter.kw_pk) || 0;
-            }
-          );
-          setValue("รวมKW_PK", String(sumPk));
+          meterData &&
+            meterData.forEach(
+              (meter: { ca: string; kw_pk: string; rate: string }) => {
+                sumPk += Number(meter.kw_pk) || 0;
+              }
+            );
+          setValue("total_kw_pk", sumPk);
         }
       }
 
-      if (findSchoolByKey[0].statusArr === "") {
+      if (findSchoolByKey[0].status!.length > 0) {
         const statusData: {
           status: string;
           date?: string;
+          remark?: string;
         }[] = [];
-        findSchoolByKey.forEach((school) => {
-          statusData.push({
-            status: String(school.Status),
-            date: "",
-          });
-          setValue(`statusArrObject.${0}.status`, String(school.Status));
-          setValue(`statusArrObject.${0}.date`, "");
+
+        findSchoolByKey[0].status!.forEach((status) => {
+          const parseStatus = JSON.parse(status) as {
+            status: string;
+            date: string;
+          };
+          const findStatus = statusOption.some((d) => d === parseStatus.status);
+          if (!findStatus) {
+            const [status, remark] = parseStatus.status.split(" ");
+            statusData.push({
+              status: String(status),
+              date: String(parseStatus.date),
+              remark: remark,
+            });
+          } else {
+            statusData.push({
+              status: String(parseStatus.status),
+              date: String(parseStatus.date),
+              remark: "",
+            });
+          }
         });
         statusFieldArr.replace(statusData);
+        statusData.map((d, i) => {
+          setValue(`statusArrObject.${i}.status`, d.status);
+          setValue(`statusArrObject.${i}.date`, d.date);
+        });
       } else {
-        const status = JSON.parse(d.statusArr) as {
+        const status = d.status?.map((a) => JSON.parse(a)) as {
           status: string;
           date: string;
         }[];
-        statusFieldArr.replace(status);
+        statusFieldArr.replace(
+          status.length > 0
+            ? status
+            : [
+                {
+                  status: "",
+                  date: "",
+                },
+              ]
+        );
         status.map((d, i) => {
           setValue(`statusArrObject.${i}.status`, d.status);
           setValue(`statusArrObject.${i}.date`, d.date);
         });
       }
 
-      if (findSchoolByKey[0].activityArr === "") {
+      if (findSchoolByKey[0].activity!.length > 0) {
         const statusData: {
           activity: string;
           date?: string;
         }[] = [];
-        findSchoolByKey.forEach((school) => {
+
+        findSchoolByKey[0].activity!.forEach((activity) => {
+          const parseActivity = JSON.parse(activity) as {
+            activity: string;
+            date: string;
+          };
           statusData.push({
-            activity: String(school.activity),
-            date: "",
+            activity: String(parseActivity.activity),
+            date: String(parseActivity.date),
           });
-          setValue(`activityArrObject.${0}.activity`, String(school.activity));
-          setValue(`activityArrObject.${0}.date`, "");
+          // setValue(
+          //   `activityArrObject.${0}.activity`,
+          //   String(parseActivity.activity)
+          // );
+          // setValue(`activityArrObject.${0}.date`, String(parseActivity.date));
         });
         activityFieldArr.replace(statusData);
       } else {
-        const status = JSON.parse(d.activityArr) as {
+        const status = d.activity?.map((a) => JSON.parse(a)) as {
           activity: string;
           date: string;
         }[];
-        activityFieldArr.replace(status);
         status.map((d, i) => {
           setValue(`activityArrObject.${i}.activity`, d.activity);
           setValue(`activityArrObject.${i}.date`, d.date);
         });
+        activityFieldArr.replace(
+          status.length > 0
+            ? status
+            : [
+                {
+                  activity: "",
+                  date: "",
+                },
+              ]
+        );
       }
       setValue(
         "location",
-        `${findSchoolByKey[0].Latitude},${findSchoolByKey[0].Longitude}`
+        `${findSchoolByKey[0].latitude},${findSchoolByKey[0].longitude}`
       );
     } else {
       reset();
@@ -298,7 +499,7 @@ export default function SolarCellForm() {
   const meterValues = watch("meterArrObject");
   useEffect(() => {
     const sum = _.sumBy(meterValues, (item) => parseFloat(item.kw_pk));
-    setValue("รวมKW_PK", String(isNaN(sum) ? "" : sum));
+    setValue("total_kw_pk", sum || 0);
   }, [meterValues]);
 
   const params = useSearchParams();
@@ -309,9 +510,9 @@ export default function SolarCellForm() {
       const findSchoolById = masterStore.masterData.find(
         (d) => d.id.toString() === school
       );
-      if (findSchoolById?.["ชื่อโรงเรียน"]) {
+      if (findSchoolById?.["school_name"]) {
         handleChangeSchool(
-          masterStore.masterDataKey[findSchoolById["ชื่อโรงเรียน"]]
+          masterStore.masterDataKey[findSchoolById["school_name"]]
         );
       }
     }
@@ -328,16 +529,16 @@ export default function SolarCellForm() {
   };
 
   const watchedValues = watch([
-    "ความเข้าใจในโมเดล ESCO (10%)",
-    "การตัดสินใจและอำนาจภายใน (10%)",
-    "ระดับความร่วมมือของโรงเรียน (10%)",
-    "ความพร้อมในการให้ข้อมูล (10%)",
-    "การค้างค่าไฟฟ้า (10%)",
-    "พื้นที่ติดตั้งที่มีอยู่ (10%)",
-    "สภาพวัสดุมุงหลังคา (10%)",
-    "สภาพโครงสร้าง (10%)",
-    "จุดเชื่อมต่อและการเดินสายไฟ (10%)",
-    "การเข้าถึงหน้างาน (10%)",
+    "esco_understanding_score",
+    "score_cooperation",
+    "score_decision_power",
+    "score_data_readiness",
+    "score_electricity_arrears",
+    "score_install_area",
+    "score_roof_material",
+    "score_structure",
+    "score_connection_wiring",
+    "score_site_access",
   ]);
   useEffect(() => {
     let score = 0;
@@ -347,14 +548,28 @@ export default function SolarCellForm() {
     });
 
     // ✅ ป้องกันลูป: ถ้าคะแนนไม่เปลี่ยน → ไม่ต้อง setValue ใหม่
-    const currentScore = watch("รวมคะแนน");
+    const currentScore = watch("score_total") || 0;
     if (currentScore !== score) {
-      setValue("รวมคะแนน", score);
+      setValue("score_total", score);
     }
   }, [watchedValues, setValue]);
 
+  const statusArr = watch("status");
+  const lastStatus =
+    Array.isArray(statusArr) && statusArr.length > 0
+      ? (() => {
+          const last = _.last(statusArr);
+          return last ? JSON.parse(last).status : undefined;
+        })()
+      : undefined;
+  // console.log("watch()", watch());
   return (
     <div className="relative pt-2 min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 pb-8">
+      <AddSchoolDialog
+        onClose={() => setOpenAddSchool(false)}
+        onSubmit={handleAddSchool}
+        open={openAddSchool}
+      />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8  ">
         <div id={`topForm`} className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
@@ -367,7 +582,11 @@ export default function SolarCellForm() {
             ระบบติดตามการติดตั้งพลังงานแสงอาทิตย์ในสถานศึกษา
           </p>
         </div>
-
+        <div className="text-end m-2">
+          <Button onClick={() => setOpenAddSchool(true)} variant="outlined">
+            Add School
+          </Button>
+        </div>
         <form
           onSubmit={handleSubmit(onSubmit)}
           className="space-y-6 sm:space-y-8"
@@ -381,11 +600,11 @@ export default function SolarCellForm() {
               </h2>
             </div>
             <div className="grid grid-cols-1 gap-4 sm:gap-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
                 <div>
                   <label className={labelClasses}>ชื่อโรงเรียน</label>
                   <SchoolAutoComplete
-                    value={watch("ชื่อโรงเรียน")}
+                    value={watch("school_name")}
                     readOnly={false}
                     masterDataKey={masterStore.masterDataKey}
                     handleChangeSchool={handleChangeSchool}
@@ -393,12 +612,25 @@ export default function SolarCellForm() {
                 </div>
                 <div>
                   <label className={labelClasses}>ตรวจสอบสถานที่</label>
-                  <input
+                  {/* <input
                     type="text"
                     className={inputClasses}
                     placeholder="ตรวจสอบสถานที่"
-                    {...register("ตรวจสอบสถานที่")}
-                  />
+                    {...register("location_checked")}
+                  /> */}
+
+                  <select
+                    className={inputClasses}
+                    {...register(`location_checked`)}
+                  >
+                    <option value="">เลือกสถานะ</option>
+                    <option value="YES">YES</option>
+                    <option value="NO">NO</option>
+                  </select>
+                </div>
+                <div className="flex flex-col text-left  gap-2">
+                  <label className={labelClasses}>Status</label>
+                  <p className=" ">{lastStatus}</p>
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
@@ -408,7 +640,7 @@ export default function SolarCellForm() {
                     type="text"
                     className={inputClasses}
                     placeholder="ที่อยู่"
-                    {...register("ที่อยู่")}
+                    {...register("school_address")}
                   />
                 </div>
                 <div>
@@ -417,7 +649,7 @@ export default function SolarCellForm() {
                     type="text"
                     className={inputClasses}
                     placeholder="ชื่อตำบล"
-                    {...register("ชื่อตำบล")}
+                    {...register("subdistrict")}
                   />
                 </div>
                 <div>
@@ -426,7 +658,7 @@ export default function SolarCellForm() {
                     type="text"
                     className={inputClasses}
                     placeholder="อำเภอ"
-                    {...register("ชื่ออำเภอ")}
+                    {...register("district")}
                   />
                 </div>
                 <div>
@@ -435,7 +667,7 @@ export default function SolarCellForm() {
                     type="text"
                     className={inputClasses}
                     placeholder="จังหวัด"
-                    {...register("ชื่อจังหวัด")}
+                    {...register("province")}
                   />
                 </div>
                 <div>
@@ -445,7 +677,7 @@ export default function SolarCellForm() {
                     className={inputClasses}
                     placeholder="รหัสไปรษณีย์"
                     maxLength={5}
-                    {...register("รหัสไปรษณีย์")}
+                    {...register("post_code")}
                   />
                 </div>
                 <div>
@@ -454,7 +686,7 @@ export default function SolarCellForm() {
                     type="text"
                     className={inputClasses}
                     placeholder="ภาค"
-                    {...register("ภาค")}
+                    {...register("school_region")}
                   />
                 </div>
 
@@ -464,13 +696,13 @@ export default function SolarCellForm() {
                     type="number"
                     className={inputClasses}
                     placeholder="จำนวนนักเรียน"
-                    {...register("จำนวนนักเรียน")}
+                    {...register("total_students")}
                   />
                 </div>
                 <div>
                   <label className={labelClasses}>ค่าไฟเฉลี่ย/เดือน</label>
                   <Controller
-                    name="ค่าฟ้าเฉลี่ย/เดือน"
+                    name="electricity_avg_month"
                     control={control}
                     render={({ field }) => (
                       <input
@@ -497,7 +729,7 @@ export default function SolarCellForm() {
                     type="text"
                     className={inputClasses}
                     placeholder="สังกัด"
-                    {...register("สังกัด")}
+                    {...register("school_affiliation")}
                   />
                 </div>
                 <div>
@@ -506,7 +738,7 @@ export default function SolarCellForm() {
                     type="text"
                     className={inputClasses}
                     placeholder="เขต"
-                    {...register("เขต")}
+                    {...register("school_district")}
                   />
                 </div>
                 <div>
@@ -515,7 +747,7 @@ export default function SolarCellForm() {
                     type="text"
                     className={inputClasses}
                     placeholder="กฟภ."
-                    {...register("กฟภ")}
+                    {...register("electricity_provider")}
                   />
                 </div>
                 <div>
@@ -525,7 +757,7 @@ export default function SolarCellForm() {
                     type="text"
                     className={inputClasses}
                     placeholder="รวมKW_PK"
-                    {...register("รวมKW_PK")}
+                    {...register("total_kw_pk")}
                   />
                 </div>
               </div>
@@ -584,7 +816,7 @@ export default function SolarCellForm() {
                           const sum =
                             (Number(total) || 0) + (Number(input) || 0);
 
-                          setValue("รวมKW_PK", String(sum.toFixed(2)));
+                          setValue("total_kw_pk", sum);
                           setValue(`meterArrObject.${index}.kw_pk`, input);
                         }}
                       />
@@ -644,7 +876,7 @@ export default function SolarCellForm() {
                     type="text"
                     className={inputClasses}
                     placeholder="ชื่อ-สกุล"
-                    {...register("ชื่อผู้ประสานงานโรงเรียน")}
+                    {...register("school_contact_name")}
                   />
                 </div>
                 <div>
@@ -653,7 +885,7 @@ export default function SolarCellForm() {
                     type="text"
                     className={inputClasses}
                     placeholder="ตำแหน่ง"
-                    {...register("ตำแหน่ง")}
+                    {...register("school_contact_position")}
                   />
                 </div>
                 <div>
@@ -664,7 +896,7 @@ export default function SolarCellForm() {
                     type="tel"
                     className={inputClasses}
                     placeholder="เบอร์โทรศัพท์"
-                    {...register("เบอร์ติดต่อผู้ประสานงาน")}
+                    {...register("school_contact_phone")}
                   />
                 </div>
               </div>
@@ -683,7 +915,7 @@ export default function SolarCellForm() {
                     type="text"
                     className={inputClasses}
                     placeholder="ชื่อ-สกุล ผู้อำนวยการ"
-                    {...register("ชื่อผู้อำนวยการโรงเรียน")}
+                    {...register("school_director")}
                   />
                 </div>
                 <div>
@@ -692,7 +924,7 @@ export default function SolarCellForm() {
                     type="tel"
                     className={inputClasses}
                     placeholder="เบอร์โทรศัพท์ ผอ."
-                    {...register("เบอร์ติดต่อ ผอ.")}
+                    {...register("school_director_phone")}
                   />
                 </div>
               </div>
@@ -705,7 +937,7 @@ export default function SolarCellForm() {
                   type="text"
                   className={inputClasses}
                   placeholder="Email / Line"
-                  {...register("E-mail")}
+                  {...register("contact_email")}
                 />
               </div>
             </div>
@@ -782,7 +1014,7 @@ export default function SolarCellForm() {
               <textarea
                 className={`${inputClasses} h-12`}
                 placeholder="การดำเนินงาน"
-                {...register("การดำเนินงาน")}
+                {...register("operation_status")}
               />
             </div>
             <div className=" gap-2 mt-4 flex relative items-end">
@@ -803,6 +1035,17 @@ export default function SolarCellForm() {
                             </option>
                           ))}
                         </select>
+                        {(watch(`statusArrObject.${index}.status`) ===
+                          "ยกเลิก" ||
+                          watch(`statusArrObject.${index}.status`) ===
+                            "ไม่สนใจ") && (
+                          <input
+                            type="text"
+                            className={inputClasses}
+                            placeholder="เหตุผล"
+                            {...register(`statusArrObject.${index}.remark`)}
+                          />
+                        )}
                         <input
                           type="date"
                           className={inputClasses}
@@ -972,7 +1215,7 @@ export default function SolarCellForm() {
 
                   <select
                     className={inputClasses}
-                    {...register(`ความเข้าใจในโมเดล ESCO (10%)`)}
+                    {...register(`esco_understanding_score`)}
                   >
                     <option value="">เลือกสถานะ</option>
                     {understandLevel.map((d) => (
@@ -988,7 +1231,7 @@ export default function SolarCellForm() {
                   </label>
                   <select
                     className={inputClasses}
-                    {...register(`ระดับความร่วมมือของโรงเรียน (10%)`)}
+                    {...register(`score_cooperation`)}
                   >
                     <option value="">เลือกสถานะ</option>
                     {coopLevel.map((d) => (
@@ -1004,7 +1247,7 @@ export default function SolarCellForm() {
                   </label>
                   <select
                     className={inputClasses}
-                    {...register(`การตัดสินใจและอำนาจภายใน (10%)`)}
+                    {...register(`score_decision_power`)}
                   >
                     <option value="">เลือกสถานะ</option>
                     {decideLevel.map((d) => (
@@ -1020,7 +1263,7 @@ export default function SolarCellForm() {
                   </label>
                   <select
                     className={inputClasses}
-                    {...register(`ความพร้อมในการให้ข้อมูล (10%)`)}
+                    {...register(`score_data_readiness`)}
                   >
                     <option value="">เลือกสถานะ</option>
                     {readyLevel.map((d) => (
@@ -1034,7 +1277,7 @@ export default function SolarCellForm() {
                   <label className={labelClasses}>การค้างค่าไฟฟ้า (10%)</label>
                   <select
                     className={inputClasses}
-                    {...register(`การค้างค่าไฟฟ้า (10%)`)}
+                    {...register(`score_electricity_arrears`)}
                   >
                     <option value="">เลือกสถานะ</option>
                     {paymentLevel.map((d) => (
@@ -1051,7 +1294,7 @@ export default function SolarCellForm() {
                 <textarea
                   className={`${inputClasses} h-12`}
                   placeholder="หมายเหตุ"
-                  {...register("หมายเหตุของโรงเรียน")}
+                  {...register("note_school")}
                 />
               </div>
             </div>
@@ -1068,7 +1311,7 @@ export default function SolarCellForm() {
 
                   <select
                     className={inputClasses}
-                    {...register(`พื้นที่ติดตั้งที่มีอยู่ (10%)`)}
+                    {...register(`score_install_area`)}
                   >
                     <option value="">เลือกสถานะ</option>
                     {locationLevel.map((d) => (
@@ -1084,7 +1327,7 @@ export default function SolarCellForm() {
                   </label>
                   <select
                     className={inputClasses}
-                    {...register(`สภาพวัสดุมุงหลังคา (10%)`)}
+                    {...register(`score_roof_material`)}
                   >
                     <option value="">เลือกสถานะ</option>
                     {materialLevel.map((d) => (
@@ -1099,7 +1342,7 @@ export default function SolarCellForm() {
                   <label className={labelClasses}>สภาพโครงสร้าง (10%)</label>
                   <select
                     className={inputClasses}
-                    {...register(`สภาพโครงสร้าง (10%)`)}
+                    {...register(`score_structure`)}
                   >
                     <option value="">เลือกสถานะ</option>
                     {structureLevel.map((d) => (
@@ -1115,7 +1358,7 @@ export default function SolarCellForm() {
                   </label>
                   <select
                     className={inputClasses}
-                    {...register(`จุดเชื่อมต่อและการเดินสายไฟ (10%)`)}
+                    {...register(`score_connection_wiring`)}
                   >
                     <option value="">เลือกสถานะ</option>
                     {connectLevel.map((d) => (
@@ -1131,7 +1374,7 @@ export default function SolarCellForm() {
                   </label>
                   <select
                     className={inputClasses}
-                    {...register(`การเข้าถึงหน้างาน (10%)`)}
+                    {...register(`score_site_access`)}
                   >
                     <option value="">เลือกสถานะ</option>
                     {easyLevel.map((d) => (
@@ -1147,7 +1390,7 @@ export default function SolarCellForm() {
                 <textarea
                   className={`${inputClasses} h-12`}
                   placeholder="หมายเหตุ"
-                  {...register("หมายเหตุของพื้นที่")}
+                  {...register("note_site")}
                 />
               </div>
             </div>
@@ -1162,7 +1405,7 @@ export default function SolarCellForm() {
                   placeholder="0-10"
                   min="0"
                   max="100"
-                  {...register(`รวมคะแนน`)}
+                  {...register(`score_total`)}
                 />
               </div>
             </div>
@@ -1223,16 +1466,15 @@ export default function SolarCellForm() {
                   type="text"
                   className={inputClasses}
                   placeholder="เลขที่เอกสาร"
-                  {...register("เลขที่")}
+                  {...register("pea_no")}
                 />
               </div>
-
               <div>
                 <label className={labelClasses}>วันที่</label>
                 <input
                   type="date"
                   className={inputClasses}
-                  {...register("วันที่")}
+                  {...register("pea_date")}
                 />
               </div>
               <div>
@@ -1244,7 +1486,7 @@ export default function SolarCellForm() {
                   {...register("เลขที่ ศธ.")}
                 /> */}
                 <Controller
-                  name="เลขที่ ศธ"
+                  name="moe_doc_no"
                   control={control}
                   render={({ field }) => (
                     <input
@@ -1268,7 +1510,7 @@ export default function SolarCellForm() {
                 <input
                   type="date"
                   className={inputClasses}
-                  {...register("วันที่ตอบกลับ")}
+                  {...register("moe_doc_date")}
                 />
               </div>
             </div>
@@ -1285,7 +1527,7 @@ export default function SolarCellForm() {
                   {...register("เลขที่ใบปะหน้า")}
                 /> */}
                 <Controller
-                  name="เลขที่ใบปะหน้า"
+                  name="cover_sheet_no"
                   control={control}
                   render={({ field }) => (
                     <input
@@ -1310,7 +1552,7 @@ export default function SolarCellForm() {
                 <input
                   type="date"
                   className={inputClasses}
-                  {...register("วันที่ใบปะหน้า")}
+                  {...register("cover_sheet_date")}
                 />
               </div>
             </div>
@@ -1324,7 +1566,7 @@ export default function SolarCellForm() {
                   type="text"
                   className={inputClasses}
                   placeholder="เลขที่เอกสาร"
-                  {...register("เลขที่หนังสือ")}
+                  {...register("book_no")}
                 />
               </div>
               <div>
@@ -1332,7 +1574,7 @@ export default function SolarCellForm() {
                 <input
                   type="date"
                   className={inputClasses}
-                  {...register("วันที่หนังสือ")}
+                  {...register("book_date")}
                 />
               </div>
               <div>
@@ -1345,7 +1587,7 @@ export default function SolarCellForm() {
                 /> */}
 
                 <Controller
-                  name="เลขที่ ศธ ข้อเสนอ"
+                  name="moe_proposal_no"
                   control={control}
                   render={({ field }) => (
                     <input
@@ -1369,7 +1611,7 @@ export default function SolarCellForm() {
                 <input
                   type="date"
                   className={inputClasses}
-                  {...register("วันที่ข้อเสนอ")}
+                  {...register("proposal_date")}
                 />
               </div>
             </div>
@@ -1384,7 +1626,7 @@ export default function SolarCellForm() {
                   <textarea
                     className={`${inputClasses} h-12 `}
                     placeholder="รายละเอียดการจำลอง"
-                    {...register("Simulation")}
+                    {...register("simulation")}
                   />
                 </div>
                 <div>
@@ -1393,11 +1635,11 @@ export default function SolarCellForm() {
                     <input
                       type="text"
                       className={inputClasses}
-                      {...register("link หนังสือเชิญ")}
+                      {...register("link_acceptance")}
                     />
                     <IconButton
                       onClick={() => {
-                        window.open(watch(`link หนังสือเชิญ`), "_blank");
+                        window.open(watch(`link_acceptance`), "_blank");
                       }}
                       color="primary"
                     >
@@ -1414,14 +1656,11 @@ export default function SolarCellForm() {
                     <input
                       type="text"
                       className={inputClasses}
-                      {...register("link หนังสือตอบรับข้อเสนอ")}
+                      {...register("link_proposal")}
                     />
                     <IconButton
                       onClick={() => {
-                        window.open(
-                          watch(`link หนังสือตอบรับข้อเสนอ`),
-                          "_blank"
-                        );
+                        window.open(watch(`link_proposal`), "_blank");
                       }}
                       color="primary"
                     >
@@ -1436,11 +1675,11 @@ export default function SolarCellForm() {
                     <input
                       type="text"
                       className={inputClasses}
-                      {...register("link ข้อเสนอโครงการ")}
+                      {...register("link_invitation")}
                     />
                     <IconButton
                       onClick={() => {
-                        window.open(watch(`link ข้อเสนอโครงการ`), "_blank");
+                        window.open(watch(`link_invitation`), "_blank");
                       }}
                       color="primary"
                     >
@@ -1497,9 +1736,9 @@ export default function SolarCellForm() {
                   className=" bg-blue-600 hover:bg-blue-700 text-white px-4 py-4 rounded-full shadow-lg transition-all"
                   onClick={() => {
                     openMap(
-                      String(watch("ชื่อโรงเรียน")),
-                      String(watch("Latitude")),
-                      String(watch("Longitude"))
+                      String(watch("school_address")),
+                      String(watch("latitude")),
+                      String(watch("longitude"))
                     );
                   }}
                 >
@@ -1576,8 +1815,8 @@ export default function SolarCellForm() {
 export const SchoolAutoComplete = (props: {
   readOnly: boolean;
   value: any;
-  masterDataKey: Record<string, SchoolData[]>;
-  handleChangeSchool: (d: SchoolData[] | undefined) => void;
+  masterDataKey: Record<string, AppwriteType<SchoolProps>[]>;
+  handleChangeSchool: (d: AppwriteType<SchoolProps>[] | undefined) => void;
 }) => {
   const { masterDataKey, readOnly = false } = props;
   const [open, setOpen] = React.useState(false);
@@ -1633,14 +1872,12 @@ export const SchoolAutoComplete = (props: {
       }}
       getOptionKey={(option) =>
         typeof option === "object" && option !== null && "id" in option
-          ? (option as SchoolData).id
+          ? (option as SchoolProps).id
           : String(option)
       }
       getOptionLabel={(option) =>
-        typeof option === "object" &&
-        option !== null &&
-        "ชื่อโรงเรียน" in option
-          ? (option as SchoolData)["ชื่อโรงเรียน"]
+        typeof option === "object" && option !== null && "school_name" in option
+          ? (option as SchoolProps)["school_name"]
           : String(option)
       }
       value={props.value ?? ""}

@@ -14,7 +14,9 @@
     --foreground: #ededed;
   }
 }
-
+.swal2-container {
+  z-index: 1700 !important; /* MUI Dialog ~1300 */
+}
 body {
   color: var(--foreground);
   background: var(--background);

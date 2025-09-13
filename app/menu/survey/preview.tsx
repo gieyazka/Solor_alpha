@@ -4,7 +4,7 @@ import _ from "lodash";
 
 type WithPhotos = { photos?: File };
 
-type WithPhotosArray = { photos: File[]; imageId: [] };
+type WithPhotosArray = { photos: File[]; image: [] };
 
 export function usePreviews<FormValues extends Record<string, any>>(
   control: Control<FormValues>,
@@ -39,7 +39,7 @@ export function usePreviews<FormValues extends Record<string, any>>(
 export function usePreviewsArr<FormValues extends Record<string, any>>(
   control: Control<FormValues>,
   fieldName: keyof FormValues
-): Array<{ photos: string[]; imageId?: string[] }> {
+): Array<{ photos: string[]; image?: string[] }> {
   // อ่านค่าล่าสุดจาก form
   const items = useWatch({
     control,
@@ -52,7 +52,7 @@ export function usePreviewsArr<FormValues extends Record<string, any>>(
     () =>
       items.map((item) => ({
         photos: item.photos?.map((f) => URL.createObjectURL(f)) ?? [],
-        imageId: item.imageId ?? [],
+        image: item.image ?? [],
       })),
     [items]
   );

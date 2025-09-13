@@ -13,6 +13,7 @@ interface StatusCardProps {
   percentage: number; // e.g. 0.09  (0–100)
   size?: number; // outer diameter of the donut
   thickness?: number; // stroke width
+  totalKw?: string;
 }
 
 export function StatusCard({
@@ -21,12 +22,14 @@ export function StatusCard({
   percentage,
   size = 100,
   thickness = 6,
+  totalKw
 }: StatusCardProps) {
   return (
     <Card
       className="cursor-pointer hover:bg-gray-100 transition-all duration-300"
       sx={{
         width: "100%",
+        height : "220px",
         // width: size + 24, // add some padding
         borderRadius: 2,
         boxShadow: 1,
@@ -78,13 +81,8 @@ export function StatusCard({
         </Box>
 
         {/* Bottom text */}
-        <Typography
-          variant="body2"
-          textAlign="center"
-          sx={{ mt: 1, lineHeight: 1 }}
-        >
-          {label}
-        </Typography>
+        <p className="mt-1 text-sm">{label}</p>
+        <p className="mt-1 text-xs">{totalKw ? `(${totalKw} KW)` : ""}</p>
       </CardContent>
     </Card>
   );

@@ -8,7 +8,6 @@ ENV NODE_NO_WARNINGS=1
 FROM base AS deps
 RUN apk add --no-cache python3 make g++
 COPY package.json package-lock.json ./
-COPY prisma ./prisma      
 RUN npm ci
 
 ARG NODE_ENV=production

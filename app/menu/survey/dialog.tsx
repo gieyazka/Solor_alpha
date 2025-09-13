@@ -358,7 +358,6 @@ export default function StructureModal({
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 gap-x-8">
                 {METAL_PROFILES.map((m) => {
                   const key = toKey(m) as MetalSheetKey;
-                  console.log(key);
 
                   return (
                     <label

@@ -27,6 +27,7 @@ import { SchoolAutoComplete } from "../form/page";
 import { useSchoolStore } from "@/stores";
 import {
   SchoolData,
+  SchoolProps,
   survey,
   SurveyBuilding,
   surveyCabinet,
@@ -39,10 +40,27 @@ import clsx from "clsx";
 import { CheckCircle, Delete, Edit, Edit2, X } from "lucide-react";
 import { Add, Close, Details } from "@mui/icons-material";
 import StructureModal, { StructureFormValues } from "./dialog";
-import { useEffect, useMemo, useState } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 import _ from "lodash";
 import { usePreviews, usePreviewsArr, usePreviewsSimple } from "./preview";
-import { createSurvey } from "@/lib/survay.actions";
+import {
+  createSurvey,
+  createSurveyBuilding,
+  createSurveyCabinet,
+  createSurveySolarInstall,
+  createSurveyTransformer,
+  createSurveyUserBehavior,
+  deleteSurveyCabinet,
+  deleteSurveySolarInstall,
+  deleteSurveyTransformer,
+  deleteSurveyUserBehavior,
+  updateSurvey,
+  updateSurveyBuilding,
+  updateSurveyCabinet,
+  updateSurveySolarInstall,
+  updateSurveyTransformer,
+  updateSurveyUserBehavior,
+} from "@/lib/survay.actions";
 import { ID, Models } from "appwrite";
 import { createClientAppwrite } from "@/utils/appwrite_client";
 import pMap from "p-map";
@@ -59,7 +77,17 @@ import {
 } from "./fn";
 import { useSurveyQuery } from "@/actions/useQuery";
 import dayjs from "dayjs";
-
+import { deleteSurveyBuilding } from "../../../lib/survay.actions";
+import { deleteImageSolar } from "@/lib/storage.action";
+import Swal from "sweetalert2";
+import { editSurvey } from "./edit.action";
+const extractFileId = (s: string) => {
+  const str = String(s).trim();
+  // จับค่าหลัง /files/ ก่อนจะเจอ / หรือ ? หรือจบสตริง
+  const m = str.match(/\/files\/([a-zA-Z0-9]+)(?=\/|\?|$)/);
+  // ถ้าไม่ใช่ URL ให้ถือว่าเป็น id ตรง ๆ
+  return m ? m[1] : str.startsWith("http") ? "" : str;
+};
 export type FormData = {
   // Section 0
   schoolName: string;
@@ -105,18 +133,21 @@ export type FormData = {
     name: string;
     photos?: File;
     imageId?: string;
+    image?: string;
     docId?: string;
   }[];
   solarCellCabinet: {
     name: string;
     photos?: File;
     imageId?: string;
+    image?: string;
     docId?: string;
   }[];
   solarCellBuiling: {
     name: string;
     photos?: File[];
     imageId?: string[];
+    image?: string[];
     docId?: string;
   }[];
   topviewImage?: File[] | string[];
@@ -285,7 +316,8 @@ export default function SurveyForm() {
         zeroExport?.map((d) => {
           return {
             name: d.cabinet,
-            imageId: d.image?.[0] ? formatUrlImage(d.image)[0] : undefined,
+            image: d.image?.[0] ? formatUrlImage(d.image)[0] : undefined,
+            imageId: d.image?.[0],
             docId: d.$id,
           };
         }) || []
@@ -296,7 +328,8 @@ export default function SurveyForm() {
         solarCell?.map((d) => {
           return {
             name: d.cabinet,
-            imageId: d.image?.[0] ? formatUrlImage(d.image)[0] : undefined,
+            image: d.image?.[0] ? formatUrlImage(d.image)[0] : undefined,
+            imageId: d.image?.[0],
             docId: d.$id,
           };
         }) || []
@@ -304,7 +337,8 @@ export default function SurveyForm() {
       const solarCellBuiling = openDialog.data.install_solar?.map((d) => {
         return {
           name: d.name,
-          imageId: d.image?.[0] ? formatUrlImage(d.image) : undefined,
+          image: d.image?.[0] ? formatUrlImage(d.image) : undefined,
+          imageId: d.image,
           docId: d.$id,
         };
       });
@@ -329,58 +363,537 @@ export default function SurveyForm() {
 
   const onSubmit = async (data: FormData) => {
     if (openDialog.data !== undefined) {
-      console.log("data", data.solarCellBuiling);
-      console.log(openDialog.data.install_solar);
+      setIsSubmitting(true);
+      try {
+        await editSurvey(data, openDialog, setCurrentStep, setIsSubmitting);
+        // const { storage } = await createClientAppwrite();
 
-      const deleteBehavior = _.differenceWith(
-        openDialog.data?.behavior,
-        data.userBehavior,
-        (a, b) => a.$id === b.docId
-      ); //ok
+        // //update
+        // // console.log("data", data);
 
-      const addBehavior = data.userBehavior.filter(
-        (d) => d.docId === undefined
-      );
+        // const deleteBuilding = _.differenceWith(
+        //   openDialog.data?.building,
+        //   data.building,
+        //   (a, b) => a.$id === b.docId
+        // );
 
-      const deleteBuilding = _.differenceWith(
-        openDialog.data?.building,
-        data.building,
-        (a, b) => a.$id === b.docId
-      );
-      const addBuilding = data.building.filter((d) => d.docId === undefined);
+        // setCurrentStep("1/9: จัดข้อมูลพฤติกรรมผู้ใช้...");
+        // console.time("1 section");
 
-      const oldZeroCabinet = openDialog.data?.cabinet?.filter((d) => {
-        return d.type === "zeroExport";
-      });
-      const deleteZeroCabinet = _.differenceWith(
-        oldZeroCabinet,
-        data.zeroExportCabinet,
-        (a, b) => a.$id === b.docId
-      );
+        // const deleteBehavior = _.differenceWith(
+        //   openDialog.data?.behavior,
+        //   data.userBehavior,
+        //   (a, b) => a.$id === b.docId
+        // ); //ok
 
-      const addZeroCabinet = data.zeroExportCabinet.filter(
-        (d) => d.docId === undefined
-      );
+        // const addBehavior = data.userBehavior.filter(
+        //   (d) => d.docId === undefined
+        // );
 
-      console.log("oldZeroCabinet", oldZeroCabinet);
+        // const updateBehavior = _.differenceWith(
+        //   data.userBehavior.filter((t) => !!t.docId),
+        //   deleteBehavior,
+        //   (a, b) => String(a.docId).trim() === String(b.$id).trim()
+        // );
+        // // console.log("deleteBehavior", deleteBehavior);
+        // // console.log("addBehavior", addBehavior);
+        // // console.log("updateBehavior", updateBehavior);
+        // const userBehavior = formatUserBehavior(addBehavior);
 
-      const oldSolarCabinet = openDialog.data?.cabinet?.filter((d) => {
-        return d.type === "solarCell";
-      });
+        // await Promise.all([
+        //   await pMap(
+        //     updateBehavior,
+        //     async (behavior) => {
+        //       const formatUpdateBehavior = formatUserBehavior([behavior]);
+        //       // console.log("first", behavior);
+        //       await updateSurveyUserBehavior({
+        //         data: formatUpdateBehavior[0],
+        //         behaviorId: behavior.docId!,
+        //       });
+        //     },
+        //     { concurrency: 3 }
+        //   ),
+        //   await pMap(
+        //     userBehavior,
+        //     async (behavior) => {
+        //       await createSurveyUserBehavior({
+        //         data: behavior,
+        //         surveyId: openDialog.data?.$id!,
+        //       });
+        //     },
+        //     { concurrency: 3 }
+        //   ),
+        //   await pMap(
+        //     deleteBehavior,
+        //     async (behavior) => {
+        //       await deleteSurveyUserBehavior({
+        //         docId: behavior.$id,
+        //       });
+        //     },
+        //     { concurrency: 3 }
+        //   ),
+        // ]);
+        // console.timeEnd("1 section");
 
-      const deleteSolarCabinet = _.differenceWith(
-        oldSolarCabinet,
-        data.solarCellCabinet,
-        (a, b) => a.$id === b.docId
-      );
-      const addSolarCabinet = data.solarCellCabinet.filter(
-        (d) => d.docId === undefined
-      );
+        // // console.log("deleteSolarCabinet", deleteSolarCabinet);
+        // // console.log("addSolarCabinet", addSolarCabinet);
 
-      // console.log("deleteBuilding", deleteBuilding);
-      // console.log("addBuilding", addBuilding);
-      // console.log("deleteBehavior", deleteBehavior);
-      // console.log("addBehavior", addBehavior);
+        // //2 transformerArrForm  พิกดหม้อแปลง
+        // setCurrentStep("2/9: จัดข้อมูลหม้อแปลง...");
+        // console.time("2 section");
+        // const deleteTransformer = _.differenceWith(
+        //   openDialog.data?.transformer,
+        //   data.transformer,
+        //   (a, b) => a.$id === b.docId
+        // );
+        // const addTransformer = data.transformer.filter(
+        //   (d) => d.docId === undefined
+        // );
+        // // console.log("deleteTransformer", deleteTransformer);
+        // // console.log("addTransformer", addTransformer);
+        // const updateTransformer = _.differenceWith(
+        //   data.transformer.filter((t) => !!t.docId),
+        //   deleteTransformer,
+        //   (a, b) => String(a.docId).trim() === String(b.$id).trim()
+        // );
+        // const formatAddTransformer = formatTransformer(addTransformer);
+        // await Promise.all([
+        //   await pMap(
+        //     updateTransformer,
+        //     async (transformer) => {
+        //       const formatUpdateTransformer = formatTransformer([transformer]);
+        //       await updateSurveyTransformer({
+        //         data: formatUpdateTransformer[0],
+        //         transformerId: transformer.docId!,
+        //       });
+        //     },
+        //     { concurrency: 3 }
+        //   ),
+        //   await pMap(
+        //     formatAddTransformer,
+        //     async (transformer) => {
+        //       await createSurveyTransformer({
+        //         surveyId: openDialog.data?.$id!,
+        //         data: transformer,
+        //       });
+        //     },
+        //     { concurrency: 3 }
+        //   ),
+        //   await pMap(deleteTransformer, async (transformer) => {
+        //     await deleteSurveyTransformer({ transformerId: transformer.$id });
+        //   }),
+        // ]);
+
+        // console.timeEnd("2 section");
+
+        // //3 building
+        // setCurrentStep("3/9: จัดข้อมูลอาคาร...");
+        // console.time("3 section");
+        // //  UPDATE  อาคาร
+        // const addBuilding = data.building.filter((d) => d.docId === undefined);
+
+        // const buildingFormat = formatBuilding(addBuilding);
+
+        // const updateBuilding = _.differenceWith(
+        //   data.building.filter((t) => !!t.docId),
+        //   deleteBuilding,
+        //   (a, b) => String(a.docId).trim() === String(b.$id).trim()
+        // );
+        // await Promise.all([
+        //   await pMap(
+        //     updateBuilding,
+        //     async (building) => {
+        //       const formatUpdateBuilding = formatBuilding([building]);
+        //       await updateSurveyBuilding({
+        //         data: formatUpdateBuilding[0],
+        //         buildingId: building.docId!,
+        //       });
+        //     },
+        //     { concurrency: 3 }
+        //   ),
+        //   await pMap(
+        //     buildingFormat,
+        //     async (building) => {
+        //       await createSurveyBuilding({
+        //         surveyId: openDialog.data?.$id!,
+        //         data: building,
+        //       });
+        //     },
+        //     { concurrency: 3 }
+        //   ),
+        //   await pMap(deleteBuilding, async (building) => {
+        //     await deleteSurveyBuilding({ buildingId: building.$id });
+        //   }),
+        // ]);
+
+        // console.timeEnd("3 section");
+        // setCurrentStep("4/9: จัดข้อมูลตู้ไฟฟ้าที่จะติดตั้งระบบ Zero export...");
+        // //6.1 zeroExportCabinet
+        // console.time("6.1 section");
+
+        // const oldZeroCabinet = openDialog.data?.cabinet?.filter((d) => {
+        //   return d.type === "zeroExport";
+        // });
+        // const deleteZeroCabinet = _.differenceWith(
+        //   oldZeroCabinet,
+        //   data.zeroExportCabinet,
+        //   (a, b) => a.$id === b.docId
+        // );
+        // // console.log("deleteZeroCabinet", deleteZeroCabinet);
+        // const addZeroCabinet = data.zeroExportCabinet.filter(
+        //   (d) => d.docId === undefined
+        // );
+        // const updateZeroCabinet = _.differenceWith(
+        //   data.zeroExportCabinet.filter((t) => !!t.docId),
+        //   deleteZeroCabinet,
+        //   (a, b) => String(a.docId).trim() === String(b.$id).trim()
+        // );
+
+        // const formatCreateZeroCabinet = await formatCabinet({
+        //   zeroExportCabinet: addZeroCabinet,
+        //   solarCellCabinet: [],
+        // });
+
+        // await Promise.all([
+        //   await pMap(
+        //     updateZeroCabinet,
+        //     async (zeroCabinet) => {
+        //       const formatUpdateCabinet = {
+        //         cabinet: zeroCabinet.name,
+        //         image: zeroCabinet.imageId ? [zeroCabinet.imageId] : [],
+        //         type: "zeroExport",
+        //       };
+
+        //       if (zeroCabinet.photos) {
+        //         const uploaded = await storage.createFile(
+        //           process.env.NEXT_PUBLIC_BUCKET_SOLAR!,
+        //           ID.unique(),
+        //           zeroCabinet.photos as File
+        //         );
+        //         if (zeroCabinet.imageId) {
+        //           await deleteImageSolar(zeroCabinet.imageId);
+        //         }
+
+        //         formatUpdateCabinet.image = [uploaded.$id];
+        //       }
+
+        //       await updateSurveyCabinet({
+        //         data: formatUpdateCabinet,
+        //         cabinetId: zeroCabinet.docId!,
+        //       });
+        //     },
+        //     { concurrency: 3 }
+        //   ),
+        //   await pMap(
+        //     formatCreateZeroCabinet,
+        //     async (zeroCabinet) => {
+        //       await createSurveyCabinet({
+        //         surveyId: openDialog.data?.$id!,
+        //         data: zeroCabinet,
+        //       });
+        //     },
+        //     { concurrency: 3 }
+        //   ),
+        //   await pMap(deleteZeroCabinet, async (zeroCabinet) => {
+        //     if (zeroCabinet.image) {
+        //       await deleteImageSolar(zeroCabinet.image[0]);
+        //     }
+        //     await deleteSurveyCabinet({ cabinetId: zeroCabinet.$id });
+        //   }),
+        // ]);
+
+        // console.timeEnd("6.1 section");
+        // setCurrentStep("5/9: จัดข้อมูลตู้ไฟฟ้าที่จะติดตั้งระบบโซล่าเซลล์...");
+
+        // console.time("6.2 section");
+        // //6.2 solarCellCabinet
+
+        // const oldSolarCabinet = openDialog.data?.cabinet?.filter((d) => {
+        //   return d.type === "solarCell";
+        // });
+        // const deleteSolarCabinet = _.differenceWith(
+        //   oldSolarCabinet,
+        //   data.solarCellCabinet,
+        //   (a, b) => a.$id === b.docId
+        // );
+        // // console.log("deleteZeroCabinet", deleteZeroCabinet);
+        // const addSolarCabinet = data.solarCellCabinet.filter(
+        //   (d) => d.docId === undefined
+        // );
+        // const updateSolarCabinet = _.differenceWith(
+        //   data.solarCellCabinet.filter((t) => !!t.docId),
+        //   deleteSolarCabinet,
+        //   (a, b) => String(a.docId).trim() === String(b.$id).trim()
+        // );
+
+        // const formatCreateSolarCabinet = await formatCabinet({
+        //   solarCellCabinet: addSolarCabinet,
+        //   zeroExportCabinet: [],
+        // });
+
+        // await Promise.all([
+        //   await pMap(
+        //     updateSolarCabinet,
+        //     async (solarCabinet) => {
+        //       const formatUpdateCabinet = {
+        //         cabinet: solarCabinet.name,
+        //         image: solarCabinet.imageId ? [solarCabinet.imageId] : [],
+        //         type: "solarCell",
+        //       };
+
+        //       if (solarCabinet.photos) {
+        //         const uploaded = await storage.createFile(
+        //           process.env.NEXT_PUBLIC_BUCKET_SOLAR!,
+        //           ID.unique(),
+        //           solarCabinet.photos as File
+        //         );
+
+        //         if (solarCabinet.imageId) {
+        //           await deleteImageSolar(solarCabinet.imageId);
+        //         }
+        //         formatUpdateCabinet.image = [uploaded.$id];
+        //       }
+        //       await updateSurveyCabinet({
+        //         data: formatUpdateCabinet,
+        //         cabinetId: solarCabinet.docId!,
+        //       });
+        //     },
+        //     { concurrency: 3 }
+        //   ),
+        //   await pMap(
+        //     formatCreateSolarCabinet,
+        //     async (solarCabinet) => {
+        //       await createSurveyCabinet({
+        //         surveyId: openDialog.data?.$id!,
+        //         data: solarCabinet,
+        //       });
+        //     },
+        //     { concurrency: 3 }
+        //   ),
+        //   await pMap(deleteSolarCabinet, async (solarCabinet) => {
+        //     if (solarCabinet.image) {
+        //       await deleteImageSolar(solarCabinet.image[0]);
+        //     }
+        //     await deleteSurveyCabinet({ cabinetId: solarCabinet.$id });
+        //   }),
+        // ]);
+
+        // console.timeEnd("6.2 section");
+        // setCurrentStep("6/9: จัดข้อมูลอาคารที่จะติดตั้งเเผงโซล่าเซลล์...");
+
+        // console.time("6.3 section");
+        // //6.3 solarCellBuiling
+
+        // const deleteSolarBuilding = _.differenceWith(
+        //   openDialog.data?.install_solar,
+        //   data.solarCellBuiling,
+        //   (a, b) => a.$id === b.docId
+        // );
+        // // console.log("deleteSolarBuilding", deleteSolarBuilding);
+        // const addSolarBuilding = data.solarCellBuiling.filter(
+        //   (d) => d.docId === undefined
+        // );
+        // // console.log("addSolarBuilding", addSolarBuilding);
+        // const updateSolarBuilding = _.differenceWith(
+        //   data.solarCellBuiling.filter((t) => !!t.docId),
+        //   deleteSolarBuilding,
+        //   (a, b) => String(a.docId).trim() === String(b.$id).trim()
+        // );
+
+        // await Promise.all([
+        //   await pMap(
+        //     updateSolarBuilding,
+        //     async (solarBuilding) => {
+        //       const formatUpdateSolarCellBulding = {
+        //         name: solarBuilding.name,
+        //         image: solarBuilding.imageId ? solarBuilding.imageId : [],
+        //       };
+        //       // console.log("solarBuilding", solarBuilding);
+        //       const usedIds = new Set(
+        //         solarBuilding.image?.map(extractFileId).filter(Boolean) // fileId ที่ถูกใช้งานอยู่
+        //       );
+        //       const toDelete = solarBuilding.imageId?.filter(
+        //         (id) => !usedIds.has(String(id).trim())
+        //       );
+        //       // console.log("toDelete", toDelete);
+        //       if (toDelete) {
+        //         await pMap(toDelete, async (id) => {
+        //           // console.log('id', id)
+        //           await deleteImageSolar(id);
+        //         });
+        //       }
+        //       if (solarBuilding.photos && solarBuilding.photos.length > 0) {
+        //         const uploadIds = await pMap(
+        //           solarBuilding.photos,
+        //           async (item) => {
+        //             const uploaded = await storage.createFile(
+        //               process.env.NEXT_PUBLIC_BUCKET_SOLAR!,
+        //               ID.unique(),
+        //               item
+        //             );
+        //             return uploaded.$id;
+        //           },
+        //           { concurrency: 3 }
+        //         );
+        //         formatUpdateSolarCellBulding.image = [...usedIds, ...uploadIds];
+        //       } else {
+        //         formatUpdateSolarCellBulding.image = [...usedIds];
+        //       }
+        //       await updateSurveySolarInstall({
+        //         data: formatUpdateSolarCellBulding,
+        //         solarId: solarBuilding.docId!,
+        //       });
+        //     },
+        //     { concurrency: 3 }
+        //   ),
+        //   await pMap(
+        //     addSolarBuilding,
+        //     async (solarBuildingg) => {
+        //       const formatSolarBuilding = await formatSolarCellInstall({
+        //         solarCellBuiling: [solarBuildingg],
+        //       });
+        //       await createSurveySolarInstall({
+        //         surveyId: openDialog.data?.$id!,
+        //         data: formatSolarBuilding[0],
+        //       });
+        //     },
+        //     { concurrency: 3 }
+        //   ),
+        //   await pMap(deleteSolarBuilding, async (solarBuilding) => {
+        //     if (solarBuilding.image) {
+        //       await pMap(solarBuilding.image, async (id) => {
+        //         await deleteImageSolar(id);
+        //       });
+        //     }
+        //     await deleteSurveySolarInstall({ solarId: solarBuilding.$id });
+        //   }),
+        // ]);
+        // console.timeEnd("6.3 section");
+        // setCurrentStep("7/9: จัดข้อมูลภาพมุมสูง...");
+
+        // //6.4 TopViewImage
+        // console.time("6.4 section");
+
+        // const usedTopView = new Set(
+        //   data.topviewImage
+        //     ?.map((image) => {
+        //       if (typeof image === "string") {
+        //         return extractFileId(image);
+        //       }
+        //     })
+        //     .filter(Boolean) // fileId ที่ถูกใช้งานอยู่
+        // );
+
+        // const toDeleteTopView = openDialog.data?.topview_image?.filter((id) => {
+        //   return !usedTopView.has(id as string);
+        // });
+        // const deleteTopViewId = toDeleteTopView?.map((d) =>
+        //   extractFileId(d as string)
+        // );
+        // const toAddTopView = data.topviewImage?.filter(
+        //   (image) => image instanceof File
+        // );
+
+        // const newTopViewId = await pMap(toAddTopView || [], async (item) => {
+        //   const uploaded = await storage.createFile(
+        //     process.env.NEXT_PUBLIC_BUCKET_SOLAR!,
+        //     ID.unique(),
+        //     item
+        //   );
+        //   return uploaded.$id;
+        // });
+        // await pMap(deleteTopViewId || [], async (id) => {
+        //   await deleteImageSolar(id);
+        // });
+
+        // const arrTopViewId = [...Array.from(usedTopView), ...newTopViewId];
+
+        // console.timeEnd("6.4 section");
+        // //6.5 bottomViewImage
+        // setCurrentStep("8/9: จัดข้อมูลภาพมุมต่ำ...");
+
+        // console.time("6.5 section");
+
+        // const usedBottomView = new Set(
+        //   data.bottomViewImage
+        //     ?.map((image) => {
+        //       if (typeof image === "string") {
+        //         return extractFileId(image);
+        //       }
+        //     })
+        //     .filter(Boolean) // fileId ที่ถูกใช้งานอยู่
+        // );
+
+        // const toDeleteBottomView = openDialog.data?.bottomview_image?.filter(
+        //   (id) => {
+        //     return !usedBottomView.has(id as string);
+        //   }
+        // );
+        // const deleteBottomViewId = toDeleteBottomView?.map((d) =>
+        //   extractFileId(d as string)
+        // );
+        // const toAddBottomView = data.bottomViewImage?.filter(
+        //   (image) => image instanceof File
+        // );
+
+        // const newBottomViewId = await pMap(
+        //   toAddBottomView || [],
+        //   async (item) => {
+        //     const uploaded = await storage.createFile(
+        //       process.env.NEXT_PUBLIC_BUCKET_SOLAR!,
+        //       ID.unique(),
+        //       item
+        //     );
+        //     return uploaded.$id;
+        //   }
+        // );
+        // await pMap(deleteBottomViewId || [], async (id) => {
+        //   await deleteImageSolar(id);
+        // });
+
+        // const arrBottomViewId = [
+        //   ...Array.from(usedBottomView),
+        //   ...newBottomViewId,
+        // ];
+
+        // console.timeEnd("6.5 section");
+        // setCurrentStep("4/9: จัดข้อมูลการสำรวจ...");
+        // const formatData = {
+        //   school_name: data.schoolName,
+        //   location: data.address,
+        //   gps: data.gps,
+        //   kwp: data.kwp,
+        //   contact_name: data.contactName,
+        //   contact_phone: data.contactPhone,
+        //   surveyor: data.surveyor,
+        //   grid_provider: data.gridProvider,
+        //   roofplan: data.docsReceived?.roofplan || false,
+        //   buildingplan: data.docsReceived?.buildingplan || false,
+        //   elecplan: data.docsReceived?.elecplan || false,
+        //   monthlybill: data.docsReceived?.monthlybill || false,
+        //   loadprofile: data.docsReceived?.loadprofile || false,
+        //   remark: data.remark,
+        //   voltageLevel: data.voltageLevel,
+        //   transformerCount: data.transformerCount,
+        //   topview_image: arrTopViewId,
+        //   bottomview_image: arrBottomViewId,
+        // };
+        // await updateSurvey({
+        //   data: formatData as Partial<survey>,
+        //   docId: openDialog.data.$id,
+        // });
+        Swal.fire({
+          icon: "success",
+          title: "บันทึกข้อมูลสำเร็จ",
+        });
+        surveyQuery.refetch();
+        setOpenDialog({ open: false });
+        reset();
+      } catch (err: any) {
+      } finally {
+        setIsSubmitting(false);
+        setCurrentStep("");
+      }
     } else if (openDialog.data === undefined) {
       if (data.schoolName === "" || data.schoolName === undefined) {
         alert("กรุณากรอกข้อมูลชื่อโรงเรียน");
@@ -459,15 +972,15 @@ export default function SurveyForm() {
     }
   };
 
-  const handleChangeSchool = (data: SchoolData[] | undefined) => {
-    setValue("schoolName", data?.[0]["ชื่อโรงเรียน"]!);
-    let address = `${data?.[0]["ที่อยู่"] || ""} ${
-      data?.[0]["ชื่อตำบล"] || ""
-    } ${data?.[0]["ชื่ออำเภอ"] || ""} ${data?.[0]["ชื่อจังหวัด"] || ""}  ${
-      data?.[0]["รหัสไปรษณีย์"] || ""
+  const handleChangeSchool = (data: SchoolProps[] | undefined) => {
+    setValue("schoolName", data?.[0]["school_name"]!);
+    let address = `${data?.[0]["school_address"] || ""} ${
+      data?.[0]["subdistrict"] || ""
+    } ${data?.[0]["district"] || ""} ${data?.[0]["province"] || ""}  ${
+      data?.[0]["post_code"] || ""
     }`;
     setValue("address", address);
-    setValue("gps", data?.[0]["Latitude"]! + "," + data?.[0]["Longitude"]!);
+    setValue("gps", data?.[0]["latitude"]! + "," + data?.[0]["longitude"]!);
   };
 
   const onEditBuilding = (props: {
@@ -1070,9 +1583,9 @@ export default function SurveyForm() {
                               src={zeroPreviews[idx]}
                               className="w-24 h-24 object-cover rounded"
                             />
-                          ) : field.imageId ? (
+                          ) : field.image ? (
                             <img
-                              src={field.imageId}
+                              src={field.image}
                               className="w-24 h-24 object-cover rounded"
                             />
                           ) : (
@@ -1116,77 +1629,81 @@ export default function SurveyForm() {
                   <label className={labelClasses}>
                     6.2 ตู้ไฟฟ้าที่จะเชื่อมต่อระบบโซล่าเซลล์
                   </label>
-                  {solarCellCabinetArrForm?.fields.map((field, idx) => (
-                    <div
-                      key={field.id}
-                      className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-center mb-4"
-                    >
-                      <input
-                        placeholder="ตู้ ไฟฟ้า อาคาร"
-                        {...register(`solarCellCabinet.${idx}.name` as const)}
-                        className="block w-full h-fit border px-2 py-1"
-                      />
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file)
-                            setValue(
-                              `solarCellCabinet.${idx}.photos` as const,
-                              file,
-                              { shouldDirty: true, shouldValidate: true }
-                            );
-                        }}
-                      />
-                      {
-                        <>
-                          {solarPreviews[idx] !== "" &&
-                          solarPreviews[idx] !== undefined ? (
-                            <img
-                              src={solarPreviews[idx]}
-                              className="w-24 h-24 object-cover rounded"
-                            />
-                          ) : field.imageId ? (
-                            <img
-                              src={field.imageId}
-                              className="w-24 h-24 object-cover rounded"
-                            />
+                  {solarCellCabinetArrForm?.fields.map((field, idx) => {
+                    return (
+                      <div
+                        key={field.id}
+                        className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-center mb-4"
+                      >
+                        <input
+                          placeholder="ตู้ ไฟฟ้า อาคาร"
+                          {...register(`solarCellCabinet.${idx}.name` as const)}
+                          className="block w-full h-fit border px-2 py-1"
+                        />
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file)
+                              setValue(
+                                `solarCellCabinet.${idx}.photos` as const,
+                                file,
+                                { shouldDirty: true, shouldValidate: true }
+                              );
+                          }}
+                        />
+                        {
+                          <>
+                            {solarPreviews[idx] !== "" &&
+                            solarPreviews[idx] !== undefined ? (
+                              <img
+                                src={solarPreviews[idx]}
+                                className="w-24 h-24 object-cover rounded"
+                              />
+                            ) : field.image ? (
+                              <img
+                                src={field.image}
+                                className="w-24 h-24 object-cover rounded"
+                              />
+                            ) : (
+                              <div className="w-24 h-24 bg-gray-200 rounded"></div>
+                            )}
+                          </>
+                        }
+                        <div className="pb-1 flex gap-2 items-end">
+                          {idx !== 0 ? (
+                            <Button
+                              onClick={() =>
+                                solarCellCabinetArrForm.remove(idx)
+                              }
+                              color="error"
+                              className="h-fit  "
+                              variant="contained"
+                            >
+                              {" "}
+                              <X className="" />{" "}
+                            </Button>
                           ) : (
-                            <div className="w-24 h-24 bg-gray-200 rounded"></div>
+                            <div className="w-16"></div>
                           )}
-                        </>
-                      }
-                      <div className="pb-1 flex gap-2 items-end">
-                        {idx !== 0 ? (
                           <Button
-                            onClick={() => solarCellCabinetArrForm.remove(idx)}
-                            color="error"
-                            className="h-fit  "
+                            onClick={() =>
+                              solarCellCabinetArrForm.append({
+                                name: "",
+                                photos: undefined,
+                              })
+                            }
+                            className="h-fit "
                             variant="contained"
                           >
                             {" "}
-                            <X className="" />{" "}
+                            <X className="rotate-45" />{" "}
                           </Button>
-                        ) : (
-                          <div className="w-16"></div>
-                        )}
-                        <Button
-                          onClick={() =>
-                            solarCellCabinetArrForm.append({
-                              name: "",
-                              photos: undefined,
-                            })
-                          }
-                          className="h-fit "
-                          variant="contained"
-                        >
-                          {" "}
-                          <X className="rotate-45" />{" "}
-                        </Button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
                 <div>
                   <label className={labelClasses}>
@@ -1253,7 +1770,7 @@ export default function SurveyForm() {
 
                       {/* 4) แสดง preview หลายภาพ */}
                       <div className="flex flex-wrap gap-2">
-                        {solarCellBuilingPreviews[i]?.imageId?.map((d, j) => {
+                        {solarCellBuilingPreviews[i]?.image?.map((d, j) => {
                           return (
                             <div key={d} className="relative w-24 h-24">
                               <img
@@ -1264,14 +1781,14 @@ export default function SurveyForm() {
                                 type="button"
                                 onClick={() => {
                                   const old =
-                                    getValues(
-                                      `solarCellBuiling.${i}.imageId`
-                                    ) || [];
+                                    getValues(`solarCellBuiling.${i}.image`) ||
+                                    [];
                                   const next = old.filter(
                                     (_, idx) => idx !== j
                                   );
+
                                   setValue(
-                                    `solarCellBuiling.${i}.imageId` as const,
+                                    `solarCellBuiling.${i}.image` as const,
                                     next,
                                     { shouldDirty: true }
                                   );

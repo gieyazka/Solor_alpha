@@ -20,6 +20,7 @@ import SchoolIcon from "@mui/icons-material/School";
 import { useSchoolStore } from "@/stores";
 import { Edit } from "lucide-react";
 import { useRouter } from "next/navigation";
+import _ from "lodash";
 
 interface FancySchoolDialogProps {
   open: boolean;
@@ -110,11 +111,20 @@ const FancySchoolDialog: React.FC<FancySchoolDialogProps> = ({
                 </Avatar>
               </ListItemAvatar>
               <div className="flex justify-between flex-1">
-                <ListItemText
-                  primary={school}
-                  primaryTypographyProps={{ variant: "body1" }}
-                  secondary={masterData.masterDataKey[school]["0"].ชื่อจังหวัด}
-                />
+                <div className="flex flex-col">
+                  <p className="font-bold text-sm ">
+                    {school} : {masterData.masterDataKey[school]?.[0]?.province}
+                  </p>
+                  <p className="text-xs font-light">
+                    {masterData.masterDataKey[school]?.[0]?.status?.length
+                      ? JSON.parse(
+                          _.last(
+                            masterData.masterDataKey[school]?.[0]?.status
+                          ) ?? "[]"
+                        ).status
+                      : "ยังไม่ระบุสถานะ"}
+                  </p>
+                </div>
                 <button
                   className="p-2 text-yellow-600 hover:bg-orange-50 rounded-full transition-colors"
                   title="แก้ไข"

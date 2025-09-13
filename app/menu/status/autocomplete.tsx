@@ -35,7 +35,13 @@ export const CustomAutoComplete = (props: {
         multiple
         open={open}
         onOpen={handleOpen}
-        onClose={handleClose}
+        // onClose={handleClose}
+        onClose={(event, reason) => {
+          // console.log('reason', reason)
+          if (reason === "blur" || reason === "escape") {
+            handleClose();
+          }
+        }}
         onInputChange={(event, value) => {
           setInputValue(value);
         }}

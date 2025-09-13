@@ -24,7 +24,7 @@ import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs from "dayjs";
 import "dayjs/locale/th";
 import { useSchoolStore } from "@/stores/index";
-import { SchoolData } from "@/@type";
+import { AppwriteType, SchoolData, SchoolProps } from "@/@type";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import _, { set } from "lodash";
 import {
@@ -35,14 +35,12 @@ import {
   Summarize,
 } from "@mui/icons-material";
 dayjs.locale("th");
-export default function ClientLayoutWrapper({
+export default function c({
   initialData,
   children,
 }: {
-  initialData: {
-    headers: string[];
-    data: SchoolData[];
-  };
+  initialData: AppwriteType<SchoolProps>[];
+
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -163,7 +161,7 @@ export default function ClientLayoutWrapper({
               <div className="space-y-2">
                 {[
                   { id: "dashboard", icon: HomeFilled, label: "Dashboard" },
-                  { id: "summary", icon: Summarize, label: "Summary" },
+                  { id: "status", icon: Summarize, label: "Status" },
                   { id: "form", icon: Description, label: "Form" },
                   { id: "survey", icon: EventNote, label: "Survey" },
                   { id: "event", icon: CalendarMonth, label: "Calendar" },

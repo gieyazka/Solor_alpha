@@ -3,9 +3,9 @@ import { Models } from "node-appwrite";
 export type Condition = ">" | ">=" | "<" | "<=" | "==" | "!=";
 
 export type SchoolData = {
-  id: number;
-  ลำดับ: number;
-  "ประมาณการติดตั้ง Solar cell": number;
+  id: string;
+  ลำดับ: string;
+  "ประมาณการติดตั้ง Solar cell": string;
   KW_PK: number;
   ตรวจสอบสถานที่: string;
   ชื่อโรงเรียน: string;
@@ -14,7 +14,7 @@ export type SchoolData = {
   ชื่ออำเภอ: string;
   ชื่อจังหวัด: string;
   รหัสไปรษณีย์: number;
-  จำนวนนักเรียน: number;
+  จำนวนนักเรียน: string;
   ภาค: string;
   สังกัด: string;
   เขต: string;
@@ -27,18 +27,18 @@ export type SchoolData = {
   "ความสนใจ 30%": number;
   "กำลังติดตั้ง 25%": number;
   "Score 10คะแนน": number;
-  "ความเข้าใจในโมเดล ESCO (10%)": number;
-  "ระดับความร่วมมือของโรงเรียน (10%)": number;
-  "การตัดสินใจและอำนาจภายใน (10%)": number;
-  "ความพร้อมในการให้ข้อมูล (10%)": number;
-  "การค้างค่าไฟฟ้า (10%)": number;
+  "ความเข้าใจในโมเดล ESCO (10%)": string;
+  "ระดับความร่วมมือของโรงเรียน (10%)": string;
+  "การตัดสินใจและอำนาจภายใน (10%)": string;
+  "ความพร้อมในการให้ข้อมูล (10%)": string;
+  "การค้างค่าไฟฟ้า (10%)": string;
 
-  "พื้นที่ติดตั้งที่มีอยู่ (10%)": number;
-  "สภาพวัสดุมุงหลังคา (10%)": number;
-  "สภาพโครงสร้าง (10%)": number;
-  "จุดเชื่อมต่อและการเดินสายไฟ (10%)": number;
-  "การเข้าถึงหน้างาน (10%)": number;
-  รวมคะแนน: number;
+  "พื้นที่ติดตั้งที่มีอยู่ (10%)": string;
+  "สภาพวัสดุมุงหลังคา (10%)": string;
+  "สภาพโครงสร้าง (10%)": string;
+  "จุดเชื่อมต่อและการเดินสายไฟ (10%)": string;
+  "การเข้าถึงหน้างาน (10%)": string;
+  รวมคะแนน: string;
 
   การดำเนินงาน: string;
   "E-mail": string;
@@ -91,17 +91,10 @@ export type SchoolData = {
   activityArrObject: { activity: string; date?: string }[];
 };
 
+export type AppwriteType<T> = Models.Document & T;
 
-export type AppwriteType<T> = Models.Document & T
-
-export type eventProps = {
-  id?: number;
-  team: string;
-  title: string;
-  description: string | null;
-  school_id: number;
-  date: string;
-  schoolData?: SchoolData;
+export type eventProps = AppwriteType<calendarProps> & {
+  schoolData?: AppwriteType<SchoolProps>;
 };
 
 export type survey = {
@@ -224,4 +217,75 @@ export type surveyTransformer = {
   location: string;
   meter: string;
   survey: survey;
+};
+export type calendarProps = {
+  team: string;
+  title: string;
+  description: string;
+  school_id: number;
+  date: Date;
+  is_delete?: boolean;
+};
+
+export type SchoolProps = {
+  id: number;
+  no?: number;
+  solarEst?: number;
+  location_checked?: boolean;
+  school_name: string;
+  school_address?: string;
+  subdistrict?: string;
+  district?: string;
+  province?: string;
+  post_code?: string;
+  total_students?: number;
+  school_region?: string;
+  school_affiliation?: string;
+  school_district?: string;
+  electricity_provider?: string;
+  power_rate?: number;
+  ca?: string;
+  kw_pk?: number;
+  operation_status?: string;
+  contact_email?: string;
+  school_contact_name?: string;
+  school_contact_position?: string;
+  school_contact_phone?: string;
+  school_director?: string;
+  school_director_phone?: string;
+  electricity_avg_month?: number;
+  investor_name?: string;
+  moe_doc_no?: string;
+  moe_doc_date?: string;
+  pea_no?: string;
+  pea_date?: string;
+  cover_sheet_no?: string;
+  cover_sheet_date?: string;
+  book_no?: string;
+  book_date?: string;
+  moe_proposal_no?: string;
+  proposal_date?: string;
+  simulation?: string;
+  latitude?: number;
+  longitude?: number;
+  status?: string[];
+  activity?: string[];
+  meter?: string[];
+  total_kw_pk?: number;
+  esco_understanding_score?: number;
+  score_cooperation?: number;
+  score_decision_power?: number;
+  score_data_readiness?: number;
+  score_electricity_arrears?: number;
+  note_school?: string;
+  score_install_area?: number;
+  score_roof_material?: number;
+  score_structure?: number;
+  score_connection_wiring?: number;
+  score_site_access?: number;
+  note_site?: string;
+  score_total?: number;
+  link_invitation?: string;
+  link_acceptance?: string;
+  link_proposal?: string;
 };

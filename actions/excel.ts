@@ -2,7 +2,6 @@
 import axios from "axios";
 import { google } from "googleapis";
 import { readFileSync } from "fs";
-import { event_schedule } from "@prisma/client";
 import { eventProps } from "@/@type";
 import { sendMessageToLine } from "./line";
 const { GOOGLESHEET_API_KEY } = process.env;

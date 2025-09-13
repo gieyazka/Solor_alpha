@@ -1,7 +1,8 @@
+"use server";
 import axios from "axios";
-import { getEventByDate } from "./event";
 import dayjs from "@/utils/dayjs";
 import { eventProps } from "@/@type";
+import _ from "lodash";
 // U2091822f75cd6222b3b15e73e19e5879   // AS
 //Uf5ad20aeae32717cc15c1f7545105fe3  //Ky
 const userIds = [
@@ -11,22 +12,19 @@ const userIds = [
 const groupId = `C5f5888f6c1097344e34a10bec4f7d37d`; //กลุ่มจริง
 // const groupId = `Uf5ad20aeae32717cc15c1f7545105fe3`;
 const { CHANNEL_ACCESS_TOKEN } = process.env;
-export const sendMessageToLine = async (data: eventProps) => {
-  try {
+export const sendMessageToLine = async (data: Partial<eventProps>) => {
+  // console.log("data", data);
 
+  try {
     const schoolData = data?.schoolData;
-    const phone = (schoolData?.["เบอร์ติดต่อผู้ประสานงาน"] || "-").replace(
-      /-/g,
-      ""
-    );
-    const director_phone = (schoolData?.["เบอร์ติดต่อ ผอ."] || "-").replace(
+    const phone = (schoolData?.["school_contact_phone"] || "-").replace(
       /-/g,
       ""
     );
 
     const flexMessage = {
       type: "flex",
-      altText: `📍 นัดหมาย: ${schoolData?.["ชื่อโรงเรียน"] || "โรงเรียน"}`,
+      altText: `📍 นัดหมาย: ${schoolData?.["school_name"] || "โรงเรียน"}`,
       contents: {
         type: "bubble",
         body: {
@@ -37,7 +35,7 @@ export const sendMessageToLine = async (data: eventProps) => {
           contents: [
             {
               type: "text",
-              text: `📍 ${schoolData?.["ชื่อโรงเรียน"] || "-"}`,
+              text: `📍 ${schoolData?.["school_name"] || "-"}`,
               weight: "bold",
               size: "lg",
               wrap: true,
@@ -46,8 +44,8 @@ export const sendMessageToLine = async (data: eventProps) => {
             {
               type: "text",
               text: `👤 ผู้ประสานงาน: ${
-                schoolData?.["ชื่อผู้ประสานงานโรงเรียน"] || "-"
-              } (${schoolData?.["ตำแหน่ง"] || "-"})`,
+                schoolData?.["school_contact_name"] || "-"
+              } (${schoolData?.["school_contact_position"] || "-"})`,
               wrap: true,
               size: "sm",
             },
@@ -57,14 +55,16 @@ export const sendMessageToLine = async (data: eventProps) => {
               text:
                 phone === "-"
                   ? "-"
-                  : `📞 เบอร์โทร: ${schoolData?.[`เบอร์ติดต่อผู้ประสานงาน`]}`,
+                  : `📞 เบอร์โทร: ${
+                      schoolData?.[`school_contact_phone`] || "-"
+                    }`,
               wrap: true,
               size: "sm",
               weight: "bold",
               // color: "#1DB446",
               align: "start", // ชิดซ้าย
               action:
-                phone === "-"
+                phone === "" || _.isEmpty(phone)
                   ? undefined
                   : {
                       type: "uri",
@@ -75,25 +75,13 @@ export const sendMessageToLine = async (data: eventProps) => {
             {
               type: "text",
               text: `👨‍🏫 ผู้อำนวยการ: ${
-                schoolData?.["ชื่อผู้อำนวยการโรงเรียน"] || "-"
-              } (${schoolData?.["เบอร์ติดต่อ ผอ."] || "-"})`,
+                schoolData?.["school_director"] || "-"
+              } (${schoolData?.["school_director_phone"] || "-"})`,
               wrap: true,
               size: "sm",
               weight: "bold",
               // color: "#1DB446",
               align: "start", // ชิดซ้าย
-              // action:
-              //   director_phone === "-"
-              //     ? undefined
-              //     : {
-              //         type: "uri",
-              //         label:
-              //           director_phone &&
-              //           director_phone.split("ต่อ")[0]?.replace(/ /g, ""),
-              //         uri: `tel:${director_phone
-              //           .split("ต่อ")[0]
-              //           ?.replace(/ /g, "")}`,
-              //       },
             },
 
             {
@@ -134,7 +122,7 @@ export const sendMessageToLine = async (data: eventProps) => {
                   ? [
                       {
                         type: "text",
-                        text: `📝 ${data.description}`,
+                        text: `📝 ${data.description || "-"}`,
                         wrap: true,
                         size: "sm",
                         color: "#888888",

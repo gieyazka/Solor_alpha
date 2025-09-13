@@ -1,13 +1,13 @@
 import { headers } from "next/headers";
 import ClientLayoutWrapper from "./ClientLayoutWrapper";
-import { getMaster } from "@/actions/school";
+import { getAllSchool } from "@/actions/school";
 export const dynamic = "force-dynamic";
 export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const masterData = await getMaster();
+  const masterData = await getAllSchool();
 
   return (
     <ClientLayoutWrapper initialData={masterData}>

@@ -1,7 +1,7 @@
-import { SchoolData } from "@/@type";
+import { SchoolProps } from "@/@type";
 import { useMemo } from "react";
 
-type Row = SchoolData;
+type Row = SchoolProps;
 
 type EletricFilter = { condition: string; value: string };
 
@@ -19,7 +19,7 @@ const ops: Record<
 };
 
 interface UseFilteredParams {
-  masterDataKey: Record<string, Row[]>;
+  masterDataKey: Record<string, SchoolProps[]>;
   selectedRegion?: string[];
   selectedDepartment?: string[];
   selectedProvince?: string[];
@@ -49,25 +49,26 @@ export function useFilteredSchoolData({
 
     function filterRow(row: Row): boolean {
       const regionMatch =
-        selectedRegion.length === 0 || selectedRegion.includes(row["ภาค"]);
+        selectedRegion.length === 0 ||
+        selectedRegion.includes(row["school_region"]!);
       const departmentMatch =
         selectedDepartment.length === 0 ||
-        selectedDepartment.includes(row["สังกัด"]);
+        selectedDepartment.includes(row["school_affiliation"]!);
       const provinceMatch =
         selectedProvince.length === 0 ||
-        selectedProvince.includes(row["ชื่อจังหวัด"]);
+        selectedProvince.includes(row["province"]!);
       const areaMatch =
-        selectedArea.length === 0 || selectedArea.includes(row["กฟภ"]);
+        selectedArea.length === 0 ||
+        selectedArea.includes(row["electricity_provider"]!);
       const schoolMatch =
         selectedSchool.length === 0 ||
-        selectedSchool.includes(row["ชื่อโรงเรียน"]);
+        selectedSchool.includes(row["school_name"]);
 
       const statusMatch = (() => {
         if (!selectedStatus) return true;
         try {
-          const arr: { status: string; date: string }[] = JSON.parse(
-            row.statusArr ?? "[]"
-          );
+          const arr: { status: string; date: string }[] =
+            row.status?.map((d) => JSON.parse(d)) || [];
           // ถ้า selectedStatus เป็นกลุ่ม prefix
           if (statusOption.includes(selectedStatus)) {
             return arr.some((d) => d.status.startsWith(selectedStatus));
@@ -91,39 +92,44 @@ export function useFilteredSchoolData({
     const groupedData = Object.entries(masterDataKey).reduce<
       Record<string, Row[]>
     >((acc, [, rows]) => {
-      const passingRows: Row[] = [];
+      let passingRows: Row[] = [];
       let sumKw = 0;
 
-      // ถ้า meterArr ในแถวแรกไม่ว่าง ให้ parse ก่อน
-      if (rows[0]?.meterArr) {
+      // 1) รวม kw จาก meter ของแถวแรก (ถ้ามี)
+      if (rows[0]?.meter) {
         try {
           const meterArr: { ca: string; kw_pk: string; rate: string }[] =
-            JSON.parse(rows[0].meterArr);
-          meterArr.forEach((m) => {
-            sumKw += parseFloat(m.kw_pk) || 0;
-          });
+            rows[0].meter.map((d) => JSON.parse(d));
+          for (const m of meterArr) sumKw += parseFloat(m.kw_pk) || 0;
         } catch {}
       }
 
+      // 2) คัดกรองและ "clone" ทุกแถวที่ผ่านเข้า passingRows
       for (const row of rows) {
         if (!filterRow(row)) continue;
-        passingRows.push(row);
-        if (!row.meterArr) {
-          sumKw += parseFloat(String(row["KW_PK"])) || 0;
-        }
+        // สำคัญ: clone ป้องกัน read-only mutation
+        passingRows.push({ ...row });
+        if (!row.meter) sumKw += parseFloat(String(row.kw_pk)) || 0;
       }
 
       if (passingRows.length === 0) return acc;
 
+      // 3) เงื่อนไขผ่านตามไฟฟ้า
       const { condition, value } = eletricFilter;
       const threshold = parseFloat(value);
       const op = ops[condition as keyof typeof ops];
       const passKW = condition && value && op ? op(sumKw, threshold) : true;
 
       if (passKW) {
-        passingRows[0]["รวมKW_PK"] = String(sumKw);
+        // 4) สร้างสำเนาของแถวแรกแล้วใส่ total_kw_pk
+        const first = { ...passingRows[0], total_kw_pk: sumKw };
+        const newPassing = [first, ...passingRows.slice(1)];
+
+        // 5) เก็บเข้า acc ด้วย key ที่ต้องการ
+        const key = first.school_name; // ปรับให้ตรง type ของคุณ
+        acc[key] = newPassing;
+
         totalKW += sumKw;
-        acc[passingRows[0]["ชื่อโรงเรียน"]] = passingRows;
       }
 
       return acc;

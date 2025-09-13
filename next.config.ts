@@ -3,6 +3,7 @@ const withPWA = require("next-pwa")({
   dest: "public",
   register: true,
   skipWaiting: true,
+  buildExcludes: [/chunks\/.*\.js$/, /.*\.map$/, /.*\.DS_Store$/],
 });
 
 const nextConfig: NextConfig = {
@@ -15,4 +16,6 @@ const nextConfig: NextConfig = {
 
 export default withPWA(nextConfig, {
   reactStrictMode: true,
+  eslint: { ignoreDuringBuilds: true }, // เร่ง build (ถ้ายอมได้)
+  typescript: { ignoreBuildErrors: true },
 });

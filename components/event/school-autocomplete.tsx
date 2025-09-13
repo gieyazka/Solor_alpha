@@ -2,9 +2,7 @@ import * as React from "react";
 import TextField from "@mui/material/TextField";
 import Autocomplete from "@mui/material/Autocomplete";
 import CircularProgress from "@mui/material/CircularProgress";
-import { getSchools } from "@/actions/school";
-import { useSchoolQuery } from "@/actions/useQuery";
-import { master_data } from "@prisma/client";
+// import { getSchools } from "@/actions/school";
 import { SchoolData } from "@/@type";
 
 interface Film {

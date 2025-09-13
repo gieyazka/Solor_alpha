@@ -1,15 +1,12 @@
 "use client";
-import { getEventByDate } from "@/actions/event";
-import { useEventQuery } from "@/actions/useQuery";
 import dayjs from "@/utils/dayjs";
 import { useState } from "react";
 import { Calendar, dayjsLocalizer, Event } from "react-big-calendar";
 import "react-big-calendar/lib/css/react-big-calendar.css";
-import { eventProps, SchoolData } from "@/@type";
-import { event_schedule } from "@prisma/client";
+import { eventProps, SchoolProps } from "@/@type";
 const localizer = dayjsLocalizer(dayjs);
 const RenderCalendar = (props: {
-  keyMaster: { [k: string]: SchoolData };
+  keyMaster: { [k: string]: SchoolProps };
   handleChangeDate: (v: Date) => void;
   handleOpenEventModal: (v: eventProps) => void;
 

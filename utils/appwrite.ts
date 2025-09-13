@@ -9,7 +9,7 @@ import {
   Messaging,
 } from "node-appwrite";
 import { cookies } from "next/headers";
-
+let clientInstance: Client | null = null;
 export async function createSessionClient() {
   const client = new Client()
     .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
@@ -32,11 +32,18 @@ export async function createSessionClient() {
   };
 }
 
+function getAppwriteClient() {
+  if (!clientInstance) {
+    clientInstance = new Client()
+      .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
+      .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT!)
+      .setKey(process.env.NEXT_APPWRITE_KEY!);
+  }
+  return clientInstance;
+}
 export async function createAdminClient() {
-  const client = new Client()
-    .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
-    .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT!)
-    .setKey(process.env.NEXT_APPWRITE_KEY!);
+  const client = getAppwriteClient();
+
 
   return {
     get account() {

@@ -1,7 +1,6 @@
 "use server";
 
 import { createAdminClient } from "@/utils/appwrite";
-import PrismaDB from "../db";
 import { Query } from "node-appwrite";
 
 export const getSurvey = async (props: { page: number; size: number }) => {
